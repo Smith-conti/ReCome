@@ -1,36 +1,114 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ReCome
 
-## Getting Started
+Plataforma web que conecta a consumidores con panaderías, pastelerías, cafeterías, heladerías y restaurantes de Cusco que tienen excedentes de alimentos, para que puedan reservarlos a precios reducidos y recogerlos en el establecimiento.
 
-First, run the development server:
+Proyecto alineado al Objetivo de Desarrollo Sostenible 12.3 (reducir el desperdicio de alimentos).
+
+## Stack
+
+- Next.js 16 (App Router) + React 19 + TypeScript
+- Tailwind CSS 4 + shadcn/ui (Base UI) + Lucide
+- Supabase (PostgreSQL, Auth y Storage) con integración SSR
+- Zod para validación
+- Despliegue previsto en Vercel
+
+Detalle de versiones y convenciones en [`docs/stack.md`](docs/stack.md).
+
+## Requisitos
+
+- Node.js 20 o superior (probado con 24)
+- npm 11
+
+## Puesta en marcha
 
 ```bash
+npm install
+cp .env.example .env.local   # en Windows: copy .env.example .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+La aplicación queda disponible en <http://localhost:3000>.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Sin credenciales de Supabase el sitio funciona en modo público (sin sesión). Para habilitar autenticación y datos, completa en `.env.local`:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```env
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+```
 
-## Learn More
+`SUPABASE_SECRET_KEY` y `CRON_SECRET` son exclusivamente de servidor y no deben llevar el prefijo `NEXT_PUBLIC_`.
 
-To learn more about Next.js, take a look at the following resources:
+- `SUPABASE_SECRET_KEY`: **Project Settings → API Keys → Secret keys** en el
+  panel de Supabase (`sb_secret_…`). Salta RLS: trátala como una contraseña.
+- `CRON_SECRET`: se genera localmente, no viene de Supabase. Por ejemplo
+  `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Scripts
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm run dev        # desarrollo
+npm run build      # build de producción
+npm run lint       # ESLint
+npx tsc --noEmit   # tipos
+```
 
-## Deploy on Vercel
+## Estructura
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```text
+src/
+├── app/
+│   ├── (public)/      # landing, catálogo y directorio
+│   ├── (auth)/        # login y registro
+│   ├── cliente/       # panel del cliente (Fase 3+)
+│   ├── negocio/       # panel del comercio (Fase 4+)
+│   └── admin/         # panel administrativo (Fase 4+)
+├── components/
+│   ├── ui/            # componentes shadcn
+│   ├── layout/        # cabecera, pie y logo
+│   └── public/        # componentes de páginas públicas
+├── lib/
+│   ├── supabase/      # clientes de navegador y servidor
+│   ├── validations/   # esquemas Zod (Fase 3+)
+│   └── utils.ts
+├── services/          # lógica de acceso a datos (Fase 3+)
+├── hooks/
+├── types/
+└── proxy.ts           # refresco de sesión (convención de Next 16)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+supabase/
+├── config.toml
+└── migrations/        # esquema, RLS, funciones y seed
+```
+
+El mapa completo de rutas está en [`docs/rutas.md`](docs/rutas.md).
+
+## Base de datos
+
+Las migraciones de la Fase 2 están en `supabase/migrations/` y se aplican en
+orden desde el SQL Editor de Supabase o con `npx supabase db push`.
+
+El detalle del modelo, las políticas RLS, las funciones RPC y las instrucciones
+de aplicación está en [`docs/base-de-datos.md`](docs/base-de-datos.md).
+
+> Las migraciones todavía no se han aplicado al proyecto real: falta completar
+> las credenciales de `.env.local`.
+
+## Estado del proyecto
+
+Fases 1 y 2 completadas: proyecto Next.js, diseño base, identidad visual,
+landing responsive, configuración de Supabase SSR, esquema PostgreSQL con RLS y
+funciones transaccionales de reservas.
+
+Las rutas de catálogo, registro e inicio de sesión muestran estados vacíos
+explícitos hasta que se implementen sus fases. No hay pagos en línea ni datos
+simulados.
+
+## Despliegue en Vercel
+
+1. Sube el repositorio a GitHub.
+2. Importa el proyecto en Vercel.
+3. Configura las variables de entorno de `.env.example` en el panel de Vercel.
+4. Ejecuta el build de producción (`npm run build`) para validar antes de desplegar.
+
+El requisito del documento es no afirmar que el proyecto está desplegado hasta que el despliegue se realice realmente.
