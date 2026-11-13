@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Mail, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ProfileForm } from "@/components/auth/profile-form";
+import { DashboardBodySkeleton } from "@/components/dashboard/dashboard-skeleton";
 import { ROLE_LABEL } from "@/lib/auth/roles";
 import { requireSessionProfile } from "@/lib/auth/session";
 
@@ -9,7 +11,15 @@ export const metadata: Metadata = {
   title: "Mi perfil",
 };
 
-export default async function ClienteProfilePage() {
+export default function ClienteProfilePage() {
+  return (
+    <Suspense fallback={<DashboardBodySkeleton />}>
+      <ClienteProfileContent />
+    </Suspense>
+  );
+}
+
+async function ClienteProfileContent() {
   const profile = await requireSessionProfile();
 
   return (

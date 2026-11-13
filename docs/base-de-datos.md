@@ -1,8 +1,8 @@
 # Base de datos y seguridad
 
-Estado de la Fase 2. Las migraciones están escritas y probadas localmente, pero
-**todavía no se han aplicado al proyecto real de Supabase** porque faltan las
-credenciales en `.env.local`.
+Estado de la Fase 2. Las migraciones están escritas, probadas localmente y
+**aplicadas al proyecto real de Supabase**: 7 tablas, 6 categorías, 3 buckets,
+18 funciones y 21 políticas RLS en `public`.
 
 ## Migraciones
 
@@ -24,8 +24,8 @@ Ubicación: `supabase/migrations/`. Se ejecutan en orden:
 ### Opción A · Editor SQL de Supabase (recomendada)
 
 `supabase/consolidado.sql` contiene las 8 migraciones en orden, dentro de una
-sola transacción y con una verificación final. Es el camino más rápido y no
-necesita CLI ni contraseña de base de datos.
+sola transacción y con una verificación final. Ya se aplicó así al proyecto
+real; este camino sirve para recrear el esquema o para levantar otro entorno.
 
 1. Abre el proyecto en <https://supabase.com/dashboard>.
 2. Entra en **SQL Editor > New query**.
@@ -110,6 +110,12 @@ Columnas protegidas (revocadas a `authenticated`):
 - `offers.business_id`, `available_quantity`, `status`, `archived_at`.
 - Las reservas y los eventos no admiten `INSERT`/`UPDATE`/`DELETE` directos.
 
+> Consecuencia para la Fase 4: el estado de aprobación **no se cambia con un
+> `update` normal**, ni siquiera desde una sesión `ADMIN`, porque el privilegio
+> de columna está revocado. Hace falta una función `security definer`
+> (`approve_business`, `reject_business`, `suspend_business`) que valide
+> `is_admin()`, actualice la fila y escriba en `audit_logs`.
+
 ## Funciones RPC
 
 | Función | Retorno | Quién puede ejecutarla |
@@ -183,12 +189,11 @@ Además, `supabase/consolidado.sql` se ejecutó completo en el mismo entorno y
 devolvió `tablas = 7`, `categorias = 6`, `buckets = 3`, con 18 funciones, 6
 triggers y 21 políticas RLS en `public`.
 
-Pendiente de verificar contra el proyecto real cuando existan credenciales:
+Pendiente de verificar dentro de las fases siguientes:
 
-1. Aplicar las migraciones en orden.
-2. Comprobar que los buckets y políticas de Storage se crearon.
-3. Probar la prueba de reservas concurrentes (Fase 7).
-4. Configurar el cron de vencimientos.
+1. Probar la reserva concurrente con un script SQL (Fase 7).
+2. Configurar el cron de vencimientos (Fase 6).
+3. Confirmar las políticas de Storage al subir la primera imagen real (Fases 4 y 5).
 
 ## Datos de prueba
 

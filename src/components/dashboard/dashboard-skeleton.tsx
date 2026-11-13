@@ -21,3 +21,19 @@ export function DashboardSkeleton() {
     </div>
   );
 }
+
+/**
+ * Marcador para el contenido de un panel. Se usa dentro del Suspense de cada
+ * página para que las lecturas dinámicas (sesión y datos) no bloqueen el
+ * prerenderizado del shell de la ruta.
+ */
+export function DashboardBodySkeleton() {
+  return (
+    <div className="space-y-4" aria-hidden="true">
+      <div className="h-9 w-56 animate-pulse rounded-md bg-muted" />
+      <div className="h-4 w-full max-w-xl animate-pulse rounded bg-muted" />
+      <div className="h-40 animate-pulse rounded-2xl bg-muted" />
+      <div className="h-40 animate-pulse rounded-2xl bg-muted" />
+    </div>
+  );
+}

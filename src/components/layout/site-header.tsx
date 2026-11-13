@@ -5,7 +5,7 @@ import {
   type HeaderUser,
 } from "@/components/layout/site-header-actions";
 import { dashboardForRole } from "@/lib/auth/roles";
-import { getSessionProfile } from "@/lib/auth/session";
+import { getRequestProfile } from "@/lib/auth/session";
 
 /**
  * Cabecera del sitio. El estado de sesión se transmite desde el servidor y se
@@ -26,7 +26,7 @@ export function SiteHeader() {
 }
 
 async function HeaderSession() {
-  const profile = await getSessionProfile();
+  const profile = await getRequestProfile();
 
   const user: HeaderUser | null = profile
     ? {

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { CheckCircle2, Clock3, MapPin, Store, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
 import { requireSessionProfile } from "@/lib/auth/session";
+import { DashboardBodySkeleton } from "@/components/dashboard/dashboard-skeleton";
 
 export const metadata: Metadata = {
   title: "Panel del comercio",
@@ -58,7 +60,15 @@ const statusCopy = {
   },
 };
 
-export default async function NegocioDashboardPage() {
+export default function NegocioDashboardPage() {
+  return (
+    <Suspense fallback={<DashboardBodySkeleton />}>
+      <NegocioDashboardContent />
+    </Suspense>
+  );
+}
+
+async function NegocioDashboardContent() {
   const profile = await requireSessionProfile();
   const supabase = await createClient();
 

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { ResetPasswordForm } from "@/components/auth/reset-password-form";
 import { buttonVariants } from "@/components/ui/button";
-import { getSessionProfile } from "@/lib/auth/session";
+import { getRequestProfile } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
   title: "Nueva contraseña",
@@ -21,7 +21,7 @@ export default function ResetPasswordPage() {
 }
 
 async function ResetContent() {
-  const profile = await getSessionProfile();
+  const profile = await getRequestProfile();
 
   return (
     <div className="mx-auto w-full max-w-md">

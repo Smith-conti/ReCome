@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Building2, CheckCircle2, Clock3, ShoppingBag, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -10,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
 import { requireSessionProfile } from "@/lib/auth/session";
+import { DashboardBodySkeleton } from "@/components/dashboard/dashboard-skeleton";
 
 export const metadata: Metadata = {
   title: "Panel administrativo",
@@ -31,7 +33,15 @@ function formatDate(value: string): string {
   }).format(new Date(value));
 }
 
-export default async function AdminDashboardPage() {
+export default function AdminDashboardPage() {
+  return (
+    <Suspense fallback={<DashboardBodySkeleton />}>
+      <AdminDashboardContent />
+    </Suspense>
+  );
+}
+
+async function AdminDashboardContent() {
   await requireSessionProfile();
   const supabase = await createClient();
 

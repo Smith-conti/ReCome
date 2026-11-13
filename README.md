@@ -4,6 +4,10 @@ Plataforma web que conecta a consumidores con panaderías, pastelerías, cafeter
 
 Proyecto alineado al Objetivo de Desarrollo Sostenible 12.3 (reducir el desperdicio de alimentos).
 
+> **¿Retomas el proyecto en otra máquina?** Lee [`TRASPASO.md`](TRASPASO.md):
+> estado de las fases, puesta en marcha, credenciales pendientes, decisiones
+> técnicas y trampas ya resueltas.
+
 ## Stack
 
 - Next.js 16 (App Router) + React 19 + TypeScript
@@ -59,22 +63,26 @@ npx tsc --noEmit   # tipos
 src/
 ├── app/
 │   ├── (public)/      # landing, catálogo y directorio
-│   ├── (auth)/        # login y registro
-│   ├── cliente/       # panel del cliente (Fase 3+)
-│   ├── negocio/       # panel del comercio (Fase 4+)
-│   └── admin/         # panel administrativo (Fase 4+)
+│   ├── (auth)/        # login, registro y recuperación
+│   ├── auth/          # callback de enlaces de Supabase
+│   ├── cliente/       # panel del cliente
+│   ├── negocio/       # panel del comercio
+│   └── admin/         # panel administrativo
 ├── components/
 │   ├── ui/            # componentes shadcn
 │   ├── layout/        # cabecera, pie y logo
+│   ├── auth/          # formularios de acceso y perfil
+│   ├── dashboard/     # estructura de los paneles privados
 │   └── public/        # componentes de páginas públicas
 ├── lib/
+│   ├── auth/          # sesión, roles, rutas y Server Actions
 │   ├── supabase/      # clientes de navegador y servidor
-│   ├── validations/   # esquemas Zod (Fase 3+)
+│   ├── validations/   # esquemas Zod
 │   └── utils.ts
-├── services/          # lógica de acceso a datos (Fase 3+)
+├── services/          # lógica de acceso a datos (fases siguientes)
 ├── hooks/
 ├── types/
-└── proxy.ts           # refresco de sesión (convención de Next 16)
+└── proxy.ts           # sesión y protección de rutas (convención de Next 16)
 
 supabase/
 ├── config.toml
@@ -91,16 +99,28 @@ orden desde el SQL Editor de Supabase o con `npx supabase db push`.
 El detalle del modelo, las políticas RLS, las funciones RPC y las instrucciones
 de aplicación está en [`docs/base-de-datos.md`](docs/base-de-datos.md).
 
-> Las migraciones todavía no se han aplicado al proyecto real: falta completar
-> las credenciales de `.env.local`.
+> Las migraciones ya están aplicadas al proyecto real de Supabase. El archivo
+> `supabase/consolidado.sql` reúne las migraciones en una sola transacción para
+> recrear el esquema desde cero.
+
+## Autenticación y roles
+
+El detalle de registro, inicio de sesión, recuperación de contraseña,
+protección de rutas y cuentas de prueba está en
+[`docs/autenticacion.md`](docs/autenticacion.md).
 
 ## Estado del proyecto
 
-Fases 1 y 2 completadas: proyecto Next.js, diseño base, identidad visual,
-landing responsive, configuración de Supabase SSR, esquema PostgreSQL con RLS y
-funciones transaccionales de reservas.
+Fases 1, 2 y 3 completadas:
 
-Las rutas de catálogo, registro e inicio de sesión muestran estados vacíos
+- proyecto Next.js, diseño base, identidad visual y landing responsive;
+- configuración de Supabase SSR;
+- esquema PostgreSQL con RLS y funciones transaccionales de reservas;
+- registro, inicio y cierre de sesión, recuperación de contraseña;
+- perfiles y paneles privados por rol (`CLIENT`, `BUSINESS`, `ADMIN`);
+- protección de rutas en proxy, layouts de servidor y RLS.
+
+Las rutas de catálogo y la gestión de ofertas muestran estados vacíos
 explícitos hasta que se implementen sus fases. No hay pagos en línea ni datos
 simulados.
 

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { CalendarCheck, ChevronRight, Mail, Phone, UserRound } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -12,12 +13,21 @@ import {
 } from "@/components/ui/card";
 import { ROLE_LABEL } from "@/lib/auth/roles";
 import { requireSessionProfile } from "@/lib/auth/session";
+import { DashboardBodySkeleton } from "@/components/dashboard/dashboard-skeleton";
 
 export const metadata: Metadata = {
   title: "Mi panel",
 };
 
-export default async function ClienteDashboardPage() {
+export default function ClienteDashboardPage() {
+  return (
+    <Suspense fallback={<DashboardBodySkeleton />}>
+      <ClienteDashboardContent />
+    </Suspense>
+  );
+}
+
+async function ClienteDashboardContent() {
   const profile = await requireSessionProfile();
   const firstName = profile.fullName.split(/\s+/)[0] ?? profile.fullName;
 

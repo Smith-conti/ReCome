@@ -1,5 +1,5 @@
-import { cache } from "react";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { dashboardForRole, isUserRole, type UserRole } from "./roles";
 
@@ -25,42 +25,60 @@ type ProfileRow = {
  * Devuelve el perfil del usuario autenticado o `null` si no hay sesión.
  *
  * Usa `getClaims()`, que verifica la firma del token, y luego lee el perfil
- * con la sesión del usuario (RLS aplica). Está memorizado por petición para
- * que el layout y la página compartan una sola consulta.
+ * con la sesión del usuario (RLS aplica).
+ *
+ * `use cache: private` es el patrón documentado por Next 16 para leer sesión:
+ * mantiene el resultado en el navegador, nunca en el servidor, y permite las
+ * APIs de petición (`cookies()`) y los valores dependientes del tiempo como
+ * `Date.now()`, que Supabase usa al validar el token. Un `cache()` de React no
+ * sirve aquí: puede reutilizar un almacén de cookies de otro contexto.
+ *
+ * Las páginas y layouts que lo llaman deben estar dentro de un `<Suspense>`.
  */
-export const getSessionProfile = cache(
-  async (): Promise<SessionProfile | null> => {
-    const supabase = await createClient();
-    const { data, error } = await supabase.auth.getClaims();
+export async function getSessionProfile(): Promise<SessionProfile | null> {
+  "use cache: private";
 
-    if (error) return null;
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.getClaims();
 
-    const subject = data?.claims?.sub;
-    if (typeof subject !== "string" || subject.length === 0) return null;
+  if (error) return null;
 
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("id, full_name, email, phone, role, avatar_url")
-      .eq("id", subject)
-      .maybeSingle<ProfileRow>();
+  const subject = data?.claims?.sub;
+  if (typeof subject !== "string" || subject.length === 0) return null;
 
-    if (profileError || !profile) return null;
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("id, full_name, email, phone, role, avatar_url")
+    .eq("id", subject)
+    .maybeSingle<ProfileRow>();
 
-    return {
-      id: profile.id,
-      fullName: profile.full_name,
-      email: profile.email,
-      phone: profile.phone,
-      role: isUserRole(profile.role) ? profile.role : "CLIENT",
-      avatarUrl: profile.avatar_url,
-    };
-  },
-);
+  if (profileError || !profile) return null;
+
+  return {
+    id: profile.id,
+    fullName: profile.full_name,
+    email: profile.email,
+    phone: profile.phone,
+    role: isUserRole(profile.role) ? profile.role : "CLIENT",
+    avatarUrl: profile.avatar_url,
+  };
+}
+
+/**
+ * Variante para componentes que aceptan visitantes sin sesión (por ejemplo la
+ * cabecera). Marca la lectura como dinámica sin redirigir.
+ */
+export async function getRequestProfile(): Promise<SessionProfile | null> {
+  await connection();
+  return getSessionProfile();
+}
 
 /** Exige sesión. Si no hay, redirige al login conservando el destino. */
 export async function requireSessionProfile(
   returnTo?: string,
 ): Promise<SessionProfile> {
+  await connection();
+
   const profile = await getSessionProfile();
 
   if (!profile) {

@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/auth/login-form";
 import { FormAlert } from "@/components/auth/fields";
 import { safeInternalPath } from "@/lib/auth/routes";
-import { dashboardForRole } from "@/lib/auth/roles";
-import { getSessionProfile } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
   title: "Ingresar",
@@ -28,14 +25,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
 }
 
 async function LoginContent({ searchParams }: LoginPageProps) {
-  const [profile, params] = await Promise.all([
-    getSessionProfile(),
-    searchParams,
-  ]);
-
-  if (profile) {
-    redirect(dashboardForRole(profile.role));
-  }
+  const params = await searchParams;
 
   const next = safeInternalPath(params?.next);
   const linkExpired = params?.error === "enlace";
