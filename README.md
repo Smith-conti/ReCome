@@ -72,12 +72,16 @@ src/
 │   ├── ui/            # componentes shadcn
 │   ├── layout/        # cabecera, pie y logo
 │   ├── auth/          # formularios de acceso y perfil
+│   ├── business/      # formulario de establecimiento
+│   ├── admin/         # panel de revisión de comercios
 │   ├── dashboard/     # estructura de los paneles privados
 │   └── public/        # componentes de páginas públicas
 ├── lib/
 │   ├── auth/          # sesión, roles, rutas y Server Actions
+│   ├── business/      # consultas y Server Actions de comercios
 │   ├── supabase/      # clientes de navegador y servidor
 │   ├── validations/   # esquemas Zod
+│   ├── format.ts      # formatos de fecha, hora y moneda
 │   └── utils.ts
 ├── services/          # lógica de acceso a datos (fases siguientes)
 ├── hooks/
@@ -86,6 +90,8 @@ src/
 
 supabase/
 ├── config.toml
+├── consolidado.sql    # todas las migraciones en un solo script
+├── fase4.sql          # migración incremental de la Fase 4 (proyecto existente)
 └── migrations/        # esquema, RLS, funciones y seed
 ```
 
@@ -93,15 +99,17 @@ El mapa completo de rutas está en [`docs/rutas.md`](docs/rutas.md).
 
 ## Base de datos
 
-Las migraciones de la Fase 2 están en `supabase/migrations/` y se aplican en
-orden desde el SQL Editor de Supabase o con `npx supabase db push`.
+Las migraciones están en `supabase/migrations/` y se aplican en orden desde el
+SQL Editor de Supabase o con `npx supabase db push`.
 
 El detalle del modelo, las políticas RLS, las funciones RPC y las instrucciones
 de aplicación está en [`docs/base-de-datos.md`](docs/base-de-datos.md).
 
-> Las migraciones ya están aplicadas al proyecto real de Supabase. El archivo
-> `supabase/consolidado.sql` reúne las migraciones en una sola transacción para
-> recrear el esquema desde cero.
+> Las migraciones de las Fases 2 y 3 están aplicadas al proyecto real de
+> Supabase. Las dos migraciones de la Fase 4 están en
+> `supabase/fase4.sql`, un script incremental de una sola ejecución para ese
+> proyecto. `supabase/consolidado.sql` reúne las 10 migraciones para recrear el
+> esquema desde cero.
 
 ## Autenticación y roles
 
@@ -111,18 +119,27 @@ protección de rutas y cuentas de prueba está en
 
 ## Estado del proyecto
 
-Fases 1, 2 y 3 completadas:
+Fases 1, 2, 3 y 4 implementadas:
 
 - proyecto Next.js, diseño base, identidad visual y landing responsive;
 - configuración de Supabase SSR;
 - esquema PostgreSQL con RLS y funciones transaccionales de reservas;
 - registro, inicio y cierre de sesión, recuperación de contraseña;
 - perfiles y paneles privados por rol (`CLIENT`, `BUSINESS`, `ADMIN`);
-- protección de rutas en proxy, layouts de servidor y RLS.
+- protección de rutas en proxy, layouts de servidor y RLS;
+- alta y edición del establecimiento por parte del comercio, con horarios
+  semanales;
+- revisión administrativa: lista con filtros, detalle con datos del dueño y
+  acciones de aprobar, rechazar, suspender y reactivar;
+- reenvío de una solicitud rechazada por parte del dueño;
+- cambio de estado solo mediante RPC `security definer` con auditoría.
 
 Las rutas de catálogo y la gestión de ofertas muestran estados vacíos
 explícitos hasta que se implementen sus fases. No hay pagos en línea ni datos
 simulados.
+
+La Fase 4 necesita que se aplique `supabase/fase4.sql` en el proyecto de
+Supabase antes de probar la aprobación de comercios.
 
 ## Despliegue en Vercel
 

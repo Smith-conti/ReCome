@@ -37,8 +37,8 @@ Los índices de cada área redirigen a su dashboard.
 | Ruta | Estado | Archivo |
 |---|---|---|
 | `/negocio` | Implementado (redirige a `/negocio/dashboard`) | `src/app/negocio/page.tsx` |
-| `/negocio/dashboard` | Implementado (Fase 3; registro de establecimiento en Fase 4) | `src/app/negocio/dashboard/page.tsx` |
-| `/negocio/perfil` | Pendiente (Fase 4) | — |
+| `/negocio/dashboard` | Implementado (Fase 3; estado del establecimiento en Fase 4) | `src/app/negocio/dashboard/page.tsx` |
+| `/negocio/perfil` | Implementado (Fase 4) | `src/app/negocio/perfil/page.tsx` |
 | `/negocio/ofertas` | Pendiente (Fase 5) | — |
 | `/negocio/ofertas/nueva` | Pendiente (Fase 5) | — |
 | `/negocio/ofertas/[id]/editar` | Pendiente (Fase 5) | — |
@@ -50,10 +50,10 @@ Los índices de cada área redirigen a su dashboard.
 | Ruta | Estado | Archivo |
 |---|---|---|
 | `/admin` | Implementado (redirige a `/admin/dashboard`) | `src/app/admin/page.tsx` |
-| `/admin/dashboard` | Implementado (Fase 3; gestión en Fase 4) | `src/app/admin/dashboard/page.tsx` |
-| `/admin/negocios` | Pendiente (Fase 4) | — |
-| `/admin/negocios/[id]` | Pendiente (Fase 4) | — |
-| `/admin/usuarios` | Pendiente (Fase 4) | — |
+| `/admin/dashboard` | Implementado (Fase 3; contadores y pendientes en Fase 4) | `src/app/admin/dashboard/page.tsx` |
+| `/admin/negocios` | Implementado (Fase 4) | `src/app/admin/negocios/page.tsx` |
+| `/admin/negocios/[id]` | Implementado (Fase 4) | `src/app/admin/negocios/[id]/page.tsx` |
+| `/admin/usuarios` | No implementado (el esquema no tiene estado de usuario) | — |
 | `/admin/ofertas` | Pendiente (Fase 5) | — |
 | `/admin/reservas` | Pendiente (Fase 6) | — |
 | `/admin/reportes` | Pendiente (Fase 7) | — |
@@ -68,3 +68,18 @@ Los índices de cada área redirigen a su dashboard.
   esa ruta si es interna y segura.
 - Con sesión, `/login`, `/registro`, `/recuperar` y `/restablecer` no se
   muestran: el proxy redirige al dashboard del rol.
+
+## Reglas de la Fase 4
+
+- Un comercio tiene como máximo un establecimiento (`businesses.owner_id` es
+  único). `/negocio/perfil` muestra el alta si no existe y la edición si ya
+  existe, con los horarios de la semana.
+- El estado de aprobación no se envía desde el formulario: el alta entra como
+  `PENDING` y la edición nunca cambia el estado.
+- Guardar un establecimiento `REJECTED` lo reenvía a revisión con la RPC
+  `resubmit_business`; el resto de ediciones conserva el estado.
+- `/admin/negocios/[id]` no filtra por estado: un administrador puede abrir
+  cualquier establecimiento, incluidos `REJECTED` y `SUSPENDED`.
+- Aprobar, rechazar y suspender exigen rol `ADMIN` en el servidor y en la RPC.
+  Un acceso cruzado entre roles se resuelve con el guard del layout (redirige
+  al dashboard propio), igual que en la Fase 3.

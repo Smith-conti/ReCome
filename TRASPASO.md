@@ -6,7 +6,8 @@
 > romper y qué trampas ya se resolvieron.
 >
 > Última actualización: **13 de noviembre de 2026** · Rama de trabajo: `master`
-> (commits `7c4448e` «Fases 1 y 2 completas» + cambios de Fase 3 sin commitear).
+> (commit `7c4448e` «Fases 1 y 2 completas» + cambios de Fases 3 y 4 sin
+> commitear).
 
 ---
 
@@ -31,13 +32,15 @@ La especificación completa, con las 7 fases y las decisiones cerradas, está en
 | 1 | Preparación del proyecto (Next.js, Tailwind, shadcn, Supabase SSR, landing) | ✅ Completada y verificada |
 | 2 | Base de datos, RLS y funciones transaccionales | ✅ Completada y **aplicada al proyecto real** |
 | 3 | Autenticación, sesiones, roles y protección de rutas | ✅ Completada y verificada en navegador |
-| 4 | Comercios y administración (registro, perfil, aprobación/suspensión) | ⏳ **Siguiente trabajo** |
+| 4 | Comercios y administración (registro, perfil, aprobación/suspensión) | ✅ Código completo · ⏳ falta aplicar `fase4.sql` en Supabase y validar en navegador |
 | 5 | Ofertas (CRUD, imágenes, stock, catálogo, filtros) | ⏳ Pendiente |
 | 6 | Reservas y recojos (crear, cancelar, vencer, entregar, historial) | ⏳ Pendiente (RPC ya listas en la base) |
 | 7 | Estadísticas, pruebas y despliegue | ⏳ Pendiente |
 
 Hay 7 tablas, 6 categorías y 3 buckets creados en el proyecto real de Supabase,
-con 7 comercios y 19 ofertas de prueba.
+con 7 comercios y 19 ofertas de prueba. Las 8 migraciones de la Fase 2 están
+aplicadas; las 2 de la Fase 4 están en `supabase/fase4.sql`, pendientes de
+ejecutar en el SQL Editor.
 
 **Nada está desplegado.** No afirmar lo contrario.
 
@@ -208,12 +211,14 @@ src/
 │   ├── (auth)/                login, registro, recuperar, restablecer
 │   ├── auth/callback/         canje del código de Supabase
 │   ├── cliente/               layout con guard + dashboard + perfil
-│   ├── negocio/               layout con guard + dashboard
-│   └── admin/                 layout con guard + dashboard
+│   ├── negocio/               layout con guard + dashboard + perfil
+│   └── admin/                 layout con guard + dashboard + negocios
 ├── components/
 │   ├── ui/                    shadcn (Base UI)
 │   ├── layout/                cabecera con menú de cuenta, pie, logo
 │   ├── auth/                  formularios y campos reutilizables
+│   ├── business/              formulario de establecimiento con horarios
+│   ├── admin/                 panel de revisión (aprobar/rechazar/suspender)
 │   ├── dashboard/             shell, navegación lateral y esqueletos
 │   └── public/                bloques de la landing y estados vacíos
 ├── lib/
@@ -223,19 +228,29 @@ src/
 │   │   ├── routes.ts          PROTECTED_PREFIXES, safeInternalPath
 │   │   ├── actions.ts         Server Actions de auth y perfil
 │   │   └── action-state.ts    tipo de estado para useActionState
+│   ├── business/
+│   │   ├── types.ts           tipos de comercio y horarios
+│   │   ├── queries.ts         lecturas del panel admin y del propio comercio
+│   │   ├── actions.ts         Server Actions de alta, edición y revisión
+│   │   └── action-state.ts    estado de los formularios
 │   ├── supabase/
 │   │   ├── client.ts          cliente de navegador
 │   │   ├── server.ts          cliente de servidor con cookies
 │   │   ├── proxy.ts           refresco de sesión y redirecciones
 │   │   └── env.ts             requireSupabaseEnv()
-│   ├── validations/auth.ts    esquemas Zod compartidos
+│   ├── validations/
+│   │   ├── auth.ts            esquemas Zod de acceso y perfil
+│   │   ├── business.ts        esquema Zod del establecimiento
+│   │   └── errors.ts          fieldErrors / readForm compartidos
+│   ├── format.ts              fecha, hora y moneda en America/Lima
 │   └── utils.ts               cn()
 └── proxy.ts                   entrada del proxy (convención Next 16)
 
 supabase/
 ├── config.toml
-├── migrations/                8 migraciones en orden
-├── consolidado.sql            las 8 en un solo script transaccional
+├── migrations/                10 migraciones en orden
+├── consolidado.sql            las 10 en un solo script transaccional
+├── fase4.sql                  las 2 nuevas, para el proyecto ya existente
 └── seed/                      datos de prueba y limpieza
 
 docs/
@@ -291,13 +306,13 @@ Reglas garantizadas en la base:
 | `reservation_events` | — | Las de sus reservas | Las de su comercio | Todo |
 | `audit_logs` | — | — | — | Solo lectura |
 
-**Importante para la Fase 4:** aunque RLS permite al admin actualizar
-`businesses`, los privilegios de columna **revocan** `approval_status`,
-`approved_at`, `rejection_reason` y `owner_id` para `authenticated`
-(`20261111090500_rls.sql`, líneas 219–238). Es decir: **ni el dueño ni un admin
-pueden cambiar el estado de aprobación con un `update` normal desde el cliente**.
-Hay que hacerlo con funciones `security definer` (recomendado, deja rastro en
-`audit_logs`) o con un cliente de servicio en el servidor. Ver sección 11.2.
+**Importante:** aunque RLS permite al admin actualizar `businesses`, los
+privilegios de columna **revocan** `approval_status`, `approved_at`,
+`rejection_reason` y `owner_id` para `authenticated`
+(`20261111090500_rls.sql`). Es decir: **ni el dueño ni un admin pueden cambiar el
+estado de aprobación con un `update` normal desde el cliente**. Por eso la Fase 4
+lo hace con funciones `security definer` que además dejan rastro en
+`audit_logs` (sección 7.3).
 
 Columnas editables por el dueño del comercio: `name, slug, description, type,
 address, district, city, phone, email, latitude, longitude, opening_hours,
@@ -314,16 +329,22 @@ logo_url, updated_at`.
 | `set_offer_stock(offer_id, quantity)` | Comercio dueño o admin |
 | `set_offer_status(offer_id, status)` | Comercio dueño o admin |
 | `archive_offer(offer_id)` | Comercio dueño o admin |
+| `approve_business(business_id)` | Solo `ADMIN` |
+| `reject_business(business_id, reason)` | Solo `ADMIN`; exige motivo de 5–500 caracteres |
+| `suspend_business(business_id, reason)` | Solo `ADMIN`; solo sobre `APPROVED` |
+| `resubmit_business(business_id)` | Dueño; solo si está `REJECTED` |
 | `expire_reservations()` | Solo `service_role` (cron) |
 
-Auxiliares: `is_admin()`, `owns_business(uuid)`, `slugify(text)`,
-`set_updated_at()`, `set_business_slug()`, `set_offer_slug()`,
+Auxiliares: `is_admin()`, `owns_business(uuid)`, `has_role(user_role)`,
+`slugify(text)`, `set_updated_at()`, `set_business_slug()`, `set_offer_slug()`,
 `sync_offer_status()`, `ensure_offer_approved()`, `set_reservation_business()`,
 `handle_new_user()`.
 
-**No existe todavía ninguna RPC de aprobación/rechazo/suspensión de comercios**
-(el enum `admin_action` ya tiene `BUSINESS_APPROVED`, `BUSINESS_REJECTED` y
-`BUSINESS_SUSPENDED`, preparados para ello).
+`has_role` nació de un bug real: la política `businesses_insert_owner`
+comprobaba el rol con una subconsulta a `profiles`, cuyas políticas volvían a
+`businesses` vía `reservations`; Postgres abortaba el `INSERT` con
+`infinite recursion detected in policy for relation "businesses"`. Ahora la
+comprobación vive en una función `security definer` y el alta funciona.
 
 ### 7.4 Storage
 
@@ -337,16 +358,17 @@ Lectura pública; 5 MB por archivo; solo `image/jpeg`, `image/png` o `image/webp
 
 ### 7.5 Cómo aplicar cambios de esquema
 
-- Proyecto real: **SQL Editor** de Supabase con `supabase/consolidado.sql`
-  (recrea todo desde cero en una transacción) **o** el archivo de migración
-  nuevo suelto.
+- Proyecto real: **SQL Editor** de Supabase con `supabase/fase4.sql` para las
+  migraciones nuevas (proyecto ya existente) o `supabase/consolidado.sql` para
+  recrear todo desde cero en una transacción.
 - Si se añade una migración, **actualizar también `consolidado.sql`** para que no
   diverjan, y las tablas de `docs/base-de-datos.md`.
 - Verificación esperada del consolidado: `tablas = 7`, `categorias = 6`,
-  `buckets = 3`.
-- Los cambios de esquema no son idempotentes (enums y tablas se crean una vez).
+  `buckets = 3`; y en ambos scripts `funciones = 23`, `politicas = 21`.
+- Los cambios de esquema no son idempotentes (enums y tablas se crean una vez);
+  `fase4.sql` sí puede reejecutarse.
 - Ya aplicado al proyecto real: 7 tablas, 6 categorías, 3 buckets, 18 funciones
-  y 21 políticas RLS en `public`.
+  y 21 políticas RLS en `public` (Fase 2). Con `fase4.sql` quedan 23 funciones.
 
 ---
 
@@ -364,15 +386,18 @@ Lectura pública; 5 MB por archivo; solo `image/jpeg`, `image/png` o `image/webp
 | `/cliente/dashboard` | Panel con datos reales del perfil |
 | `/cliente/perfil` | Editar nombre y teléfono (correo y rol no editables) |
 | `/negocio` | Redirige a `/negocio/dashboard` |
-| `/negocio/dashboard` | Panel con el estado real del establecimiento |
+| `/negocio/dashboard` | Panel con el estado real del establecimiento y acceso a la edición |
+| `/negocio/perfil` | Alta (si no existe) y edición del establecimiento, con horarios semanales |
 | `/admin` | Redirige a `/admin/dashboard` |
 | `/admin/dashboard` | Contadores reales: pendientes, aprobados, clientes, ofertas activas |
+| `/admin/negocios` | Listado con filtro por estado, contadores y enlaces al detalle |
+| `/admin/negocios/[id]` | Datos del dueño, ubicación, horarios, ofertas y acciones de revisión |
 
 ### Pendientes (fuente: sección 4 de `base-recome.md`)
 
 | Fase | Rutas |
 |---|---|
-| 4 | `/negocio/perfil`, `/admin/negocios`, `/admin/negocios/[id]`, `/admin/usuarios` |
+| 4 | `/admin/usuarios` (diferida: el esquema no tiene estado de usuario) |
 | 5 | `/ofertas/[id]`, `/establecimientos/[slug]`, `/negocio/ofertas`, `/negocio/ofertas/nueva`, `/negocio/ofertas/[id]/editar`, `/admin/ofertas` |
 | 6 | `/cliente/reservas`, `/negocio/reservas`, `/negocio/entregas`, `/admin/reservas` |
 | 7 | `/admin/reportes` |
@@ -454,77 +479,97 @@ eliminado redirigido a `/login`, sin errores de consola. `npm run lint` y
 
 ---
 
-## 11. Fase 4 — Comercios y administración (siguiente trabajo)
+## 11. Fase 4 — Comercios y administración ✅ (código)
 
 Objetivo: que un `BUSINESS` registre y edite su establecimiento, y que un
 `ADMIN` lo apruebe, rechace o suspenda.
 
-### 11.1 Tareas de la especificación
+### 11.1 Qué se implementó
 
-1. Registro de establecimientos.
-2. Panel de comercio (completar lo que hoy solo muestra el estado).
-3. Aprobación administrativa.
-4. Edición del perfil del establecimiento.
-5. Suspensión y rechazo.
-6. Validación de permisos.
+1. **Alta del establecimiento** en `/negocio/perfil` (nombre, tipo, descripción,
+   dirección, distrito, teléfono, correo, coordenadas, logo y horarios de los 7
+   días con tramos múltiples). El `owner_id` sale siempre de la sesión.
+2. **Panel de comercio** `/negocio/dashboard` con el estado real, el motivo de
+   rechazo y el botón «Editar establecimiento» o «Corregir datos y reenviar».
+3. **Aprobación administrativa** desde `/admin/negocios/[id]`, con nota opcional
+   en `audit_logs`.
+4. **Edición del perfil** del establecimiento, conservando el estado.
+5. **Rechazo y suspensión** con motivo obligatorio (5–500 caracteres), visible
+   para el dueño.
+6. **Validación de permisos** en cada capa: layout con `requireRole`, Server
+   Actions que revalidan sesión y propiedad, RLS y RPC que comprueban el rol
+   dentro de la base.
 
-### 11.2 Decisión técnica previa (importante)
+### 11.2 Decisiones técnicas
 
-El estado de aprobación **no se puede actualizar con un `update` desde el
-cliente**, ni siquiera como admin (privilegios de columna, sección 7.2). Opciones:
+- El estado de aprobación **no se actualiza con `update`**: las columnas están
+  revocadas para `authenticated` (sección 7.2). Se añadieron cuatro RPC
+  `security definer` (`approve_business`, `reject_business`,
+  `suspend_business`, `resubmit_business`) que validan `is_admin()` u
+  `owns_business()`, actualizan la fila y escriben en `audit_logs`.
+- `approve_business` es idempotente y también sirve para **reactivar** un
+  comercio suspendido. `reject_business` no acepta comercios ya aprobados (para
+  eso está la suspensión). `resubmit_business` solo lo puede llamar el dueño y
+  solo si el comercio está `REJECTED`.
+- **El alta no necesita RPC**: `businesses_insert_owner` permite el `INSERT`
+  propio y fuerza `approval_status = 'PENDING'`. Pero esa política tenía un bug
+  de recursión (sección 7.3); se corrigió con `has_role` en la migración
+  `20261113091000_business_insert_policy.sql`.
+- Guardar un comercio `REJECTED` en `/negocio/perfil` actualiza los datos y
+  llama a `resubmit_business`, de modo que vuelve a `PENDING` en una sola
+  acción.
+- `/admin/usuarios` se **difirió a propósito**: `profiles` no tiene columna de
+  estado, así que suspender usuarios exigiría cambiar el esquema. No se creó una
+  ruta sin función.
 
-- **Recomendada:** nueva migración con RPC `security definer`
-  `approve_business`, `reject_business` (exige motivo) y `suspend_business`
-  (exige motivo), que validen `is_admin()`, actualicen `businesses` y escriban
-  en `audit_logs` con el `admin_action` correspondiente. Mantiene el modelo de
-  seguridad actual y deja auditoría real.
-- Alternativa: cliente con `SUPABASE_SECRET_KEY` en el servidor
-  (`src/lib/supabase/admin.ts`). Salta RLS y no escribe auditoría por sí solo;
-  usar solo si la RPC resulta poco práctica.
-
-El **alta** del establecimiento, en cambio, no necesita nada especial: la política
-`businesses_insert_owner` ya permite a un `BUSINESS` insertar su propia fila y
-obliga a que `approval_status` sea `PENDING` (aunque el formulario intente otra
-cosa). La edición del perfil usa las columnas concedidas (sección 7.2), así que
-tampoco requiere RPC. Solo el cambio de estado exige función.
-
-Al aprobar un comercio hay que fijar `approved_at = now()` y limpiar
-`rejection_reason` (hay constraints que lo exigen, ver
-`20261111090100_tables.sql`, líneas 56–65).
-
-### 11.3 Archivos previstos
+### 11.3 Archivos creados o modificados
 
 ```text
-supabase/migrations/2026...._admin_business_functions.sql   RPC de aprobación
-supabase/consolidado.sql                                    regenerar
-src/lib/validations/business.ts                             Zod del comercio
-src/lib/business/actions.ts                                 Server Actions
-src/lib/business/queries.ts                                 lecturas del panel
-src/components/business/business-form.tsx                   alta y edición
-src/components/admin/business-review.tsx                    aprobar/rechazar/suspender
-src/app/negocio/perfil/page.tsx                             alta si no existe + edición
-src/app/admin/negocios/page.tsx                             lista con filtro por estado
-src/app/admin/negocios/[id]/page.tsx                        detalle y acciones
-src/app/admin/usuarios/page.tsx                             (si el alcance lo incluye)
+supabase/migrations/20261113090000_admin_business_functions.sql   RPC de revisión
+supabase/migrations/20261113091000_business_insert_policy.sql     has_role + política de alta
+supabase/consolidado.sql                                          10 migraciones
+supabase/fase4.sql                                                script incremental
+src/lib/validations/business.ts                                   Zod del comercio y horarios
+src/lib/validations/errors.ts                                     fieldErrors / readForm
+src/lib/business/{types,queries,actions,action-state}.ts          dominio del comercio
+src/lib/format.ts                                                 fecha, hora y moneda
+src/components/business/business-form.tsx                         alta y edición
+src/components/admin/business-review-panel.tsx                    aprobar/rechazar/suspender
+src/app/negocio/perfil/page.tsx                                   alta si no existe + edición
+src/app/admin/negocios/page.tsx                                   lista con filtro por estado
+src/app/admin/negocios/[id]/page.tsx                              detalle y acciones
+src/components/dashboard/dashboard-nav.tsx                        enlaces nuevos
+src/app/negocio/dashboard/page.tsx                                CTA de edición
+src/app/admin/dashboard/page.tsx                                  contadores y «Ver todos»
+src/lib/auth/{actions,action-state}.ts                            migrados a fieldErrors
 ```
 
-Además: enlaces «Completar perfil del establecimiento» en
-`/negocio/dashboard` y «Comercios» en la navegación de `/admin`; enlaces
-pendientes en `src/components/dashboard/dashboard-nav.tsx`.
+### 11.4 Verificación hecha
 
-### 11.4 Requisitos de calidad para darla por terminada
+- **35 comprobaciones SQL** nuevas en PGlite (además de las 42 de la Fase 2):
+  alta `PENDING`, imposibilidad de autoaprobarse, edición sin cambiar estado,
+  autorización de cada RPC, aprobación idempotente con auditoría, rechazo y
+  suspensión con motivo, reenvío solo por el dueño, salida y vuelta al catálogo.
+- `verify-consolidated.cjs`: `tablas = 7`, `categorias = 6`, `buckets = 3`,
+  23 funciones y 21 políticas.
+- `verify-fase4-sql.cjs`: `fase4.sql` aplicado sobre un esquema de Fase 2 deja
+  los mismos conteos, el alta ya no recursa y la aprobación se audita.
+- `npm run lint` y `npm run build` limpios.
+- En navegador, con sesión `ADMIN` real: `/admin/dashboard` con contadores,
+  `/admin/negocios` con filtros y los 7 comercios, detalle con datos del dueño,
+  horarios y ofertas. Sin sesión, las rutas privadas redirigen a
+  `/login?next=…`.
 
-- Zod compartido cliente/servidor para todos los campos (incluido
-  `opening_hours` como JSON validado, no texto libre).
-- Server Actions que revaliden sesión, rol y propiedad; nunca confiar en el
-  `owner_id` que llega del formulario.
-- Toda página nueva dentro de `<Suspense>` con su esqueleto.
-- Listados con estado vacío explícito y estado de carga.
-- Rechazo y suspensión exigen motivo visible en el detalle.
-- `npm run lint` y `npm run build` sin errores.
-- Verificación real en navegador (no solo compilación).
-- Actualizar `docs/rutas.md`, `docs/base-de-datos.md` y `README.md`.
-- Preguntar al usuario antes de empezar la Fase 5.
+### 11.5 Pendiente para cerrar la fase
+
+1. **Aplicar `supabase/fase4.sql`** en Supabase → SQL Editor (requiere acceso al
+   panel; el proyecto solo tiene claves publishable/secret, no DDL). Debe
+   devolver `funciones = 23` y `politicas = 21`.
+2. Tras aplicarlo, probar en navegador: alta de un comercio nuevo, aprobación,
+   rechazo con motivo, reenvío del dueño, suspensión y reactivación, accesos
+   cruzados y estados vacíos.
+3. Confirmar que ya no aparece `infinite recursion detected in policy for
+   relation "businesses"` al dar de alta.
 
 ---
 
@@ -598,11 +643,15 @@ orden (4 → 5 → 6 → 7).
 | Avisos de hidratación en el navegador | Extensiones (Grammarly, LanguageTool) | Ignorar: no vienen del código |
 | `npm run dev > archivo.log 2>&1` falla en Windows | Redirección de shell en este entorno | Usar `npm run dev` normal o lanzarlo con `spawn` de Node |
 | Horas de recojo desfasadas | PostgREST devuelve UTC | El seed usa offset `-05:00`; presentar con `America/Lima` |
+| `infinite recursion detected in policy for relation "businesses"` al dar de alta un comercio | `businesses_insert_owner` consultaba `profiles`, que volvía a `businesses` vía `reservations` | Migración `20261113091000`: helper `has_role` `security definer` |
+| `Date.now() while prerendering` en `/admin/negocios/[id]` | `generateMetadata` leía Supabase antes de marcar la ruta como dinámica | `await connection()` al inicio de `generateMetadata` |
+| El navegador headless no muestra el contenido de `<Suspense>` | `requestAnimationFrame` se pausa si la ventana no está visible | No es un fallo de la app: el HTML servido sí trae el contenido; validar con `tabs.focus` o por HTTP |
 
-Estado de Git: hay cambios de la Fase 3 sin commitear (páginas y layouts de
-auth, paneles, `session.ts`, `site-header.tsx`, `dashboard-skeleton.tsx`,
-`README.md`, `docs/rutas.md` y el nuevo `docs/autenticacion.md`). Conviene
-commitear antes de empezar la Fase 4 para tener un punto de retorno limpio.
+Estado de Git: hay cambios de las Fases 3 y 4 sin commitear (páginas y layouts de
+auth, paneles, `lib/auth`, `lib/business`, `components/business`,
+`components/admin`, `docs/`, `README.md`, `TRASPASO.md`, migraciones 9–10 y
+`supabase/fase4.sql`). Conviene commitear antes de empezar la Fase 5 para tener
+un punto de retorno limpio. `.env.local` no viaja con Git.
 
 ---
 
@@ -653,16 +702,17 @@ Si retomas el proyecto, en este orden:
 4. `docs/base-de-datos.md` — modelo, RLS y RPC.
 5. `docs/rutas.md` — qué existe y qué falta.
 6. `docs/autenticacion.md` — flujos y roles.
-7. `src/app/negocio/dashboard/page.tsx` y
-   `src/app/admin/dashboard/page.tsx` — punto de partida de la Fase 4.
+7. `src/lib/business/actions.ts` — Server Actions de comercios.
+8. `src/app/admin/negocios/[id]/page.tsx` — detalle y acciones de revisión.
 
 ---
 
 ## 18. Próximo paso concreto
 
-1. Commitear el estado actual (Fase 3).
-2. Configurar las Redirect URLs en Supabase (sección 4).
-3. Implementar la Fase 4 siguiendo la sección 11, empezando por la migración de
-   RPC de aprobación y el formulario de establecimiento.
-4. Verificar en navegador, actualizar documentación y pedir validación antes de
-   la Fase 5.
+1. **Aplicar `supabase/fase4.sql`** en Supabase → SQL Editor y comprobar que
+   devuelve `funciones = 23` y `politicas = 21`.
+2. Probar en navegador el ciclo completo con cuentas reales: alta de un comercio nuevo,
+   aprobación, rechazo con motivo, reenvío del dueño, suspensión y reactivación.
+3. Configurar las Redirect URLs en Supabase (sección 4), si aún no está hecho.
+4. Commitear el estado actual (Fases 3 y 4).
+5. Pedir validación de la Fase 4 antes de empezar la Fase 5 (ofertas).

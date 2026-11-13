@@ -42,14 +42,14 @@ const statusCopy = {
     tone: "default" as const,
     icon: CheckCircle2,
     description:
-      "Tu establecimiento está aprobado. Podrás publicar excedentes en cuanto se habilite la gestión de ofertas.",
+      "Tu establecimiento está aprobado. Mantén tus datos y horarios actualizados para que los clientes sepan dónde recoger.",
   },
   REJECTED: {
     label: "Rechazado",
     tone: "destructive" as const,
     icon: XCircle,
     description:
-      "Tu solicitud fue rechazada. Revisa el motivo y corrige los datos de tu establecimiento.",
+      "Tu solicitud fue rechazada. Revisa el motivo, corrige los datos y vuelve a enviarla a revisión.",
   },
   SUSPENDED: {
     label: "Suspendido",
@@ -131,6 +131,18 @@ async function NegocioDashboardContent() {
                 Motivo del rechazo: {business.rejection_reason}
               </div>
             ) : null}
+
+            <Link
+              href="/negocio/perfil"
+              className={buttonVariants({
+                variant: "outline",
+                className: "h-9 w-fit",
+              })}
+            >
+              {business.approval_status === "REJECTED"
+                ? "Corregir datos y reenviar"
+                : "Editar establecimiento"}
+            </Link>
           </CardContent>
         </Card>
       ) : (
@@ -147,19 +159,19 @@ async function NegocioDashboardContent() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm leading-relaxed text-muted-foreground">
-              La creación del establecimiento estará disponible muy pronto.
-              Cuando se habilite, podrás registrar el nombre, la dirección, el
-              horario y el rubro de tu negocio. Un administrador lo revisará
-              antes de que publiques ofertas.
+              Registra el nombre, la dirección, el horario y el rubro de tu
+              negocio. Un administrador lo revisará antes de que aparezca en el
+              catálogo público.
             </p>
             <Link
-              href="/"
+              href="/negocio/perfil"
               className={buttonVariants({
-                variant: "outline",
+                variant: "default",
                 className: "h-9 w-fit",
               })}
             >
-              Volver al inicio
+              <Store className="size-4" aria-hidden="true" />
+              Registrar establecimiento
             </Link>
           </CardContent>
         </Card>

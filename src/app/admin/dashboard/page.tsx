@@ -1,7 +1,16 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
-import { Building2, CheckCircle2, Clock3, ShoppingBag, Users } from "lucide-react";
+import {
+  Building2,
+  CheckCircle2,
+  ChevronRight,
+  Clock3,
+  ShoppingBag,
+  Users,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -135,14 +144,27 @@ async function AdminDashboardContent() {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building2 className="size-4 text-primary" aria-hidden="true" />
-            Comercios en revisión
-          </CardTitle>
-          <CardDescription>
-            Los últimos establecimientos que esperan aprobación.
-          </CardDescription>
+        <CardHeader className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="size-4 text-primary" aria-hidden="true" />
+              Comercios en revisión
+            </CardTitle>
+            <CardDescription>
+              Los últimos establecimientos que esperan aprobación.
+            </CardDescription>
+          </div>
+          <Link
+            href="/admin/negocios"
+            className={buttonVariants({
+              variant: "outline",
+              size: "sm",
+              className: "h-8",
+            })}
+          >
+            Ver todos
+            <ChevronRight className="size-3.5" aria-hidden="true" />
+          </Link>
         </CardHeader>
         <CardContent>
           {pending.length === 0 ? (
@@ -157,20 +179,28 @@ async function AdminDashboardContent() {
           ) : (
             <ul className="divide-y divide-border">
               {pending.map((business) => (
-                <li
-                  key={business.id}
-                  className="flex flex-wrap items-center justify-between gap-2 py-3 first:pt-0 last:pb-0"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">
-                      {business.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {business.district ?? "Sin distrito"} · Registrado el{" "}
-                      {formatDate(business.created_at)}
-                    </p>
-                  </div>
-                  <Badge variant="secondary">En revisión</Badge>
+                <li key={business.id}>
+                  <Link
+                    href={`/admin/negocios/${business.id}`}
+                    className="flex flex-wrap items-center justify-between gap-2 py-3 transition-colors first:pt-0 last:pb-0 hover:text-primary"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">
+                        {business.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {business.district ?? "Sin distrito"} · Registrado el{" "}
+                        {formatDate(business.created_at)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary">En revisión</Badge>
+                      <ChevronRight
+                        className="size-4 text-muted-foreground"
+                        aria-hidden="true"
+                      />
+                    </div>
+                  </Link>
                 </li>
               ))}
             </ul>

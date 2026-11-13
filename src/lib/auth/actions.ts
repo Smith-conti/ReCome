@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { AuthError } from "@supabase/supabase-js";
-import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { safeInternalPath } from "@/lib/auth/routes";
 import { dashboardForRole, isUserRole } from "@/lib/auth/roles";
@@ -16,25 +15,13 @@ import {
   updatePasswordSchema,
   updateProfileSchema,
 } from "@/lib/validations/auth";
+import { fieldErrors, readForm } from "@/lib/validations/errors";
 
 function siteUrl(): string {
   return (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(
     /\/$/,
     "",
   );
-}
-
-function fieldErrors(error: z.ZodError): Record<string, string> {
-  const result: Record<string, string> = {};
-
-  for (const issue of error.issues) {
-    const key = issue.path[0];
-    if (typeof key === "string" && !result[key]) {
-      result[key] = issue.message;
-    }
-  }
-
-  return result;
 }
 
 function errorMessage(error: AuthError): string {
@@ -62,11 +49,6 @@ function errorMessage(error: AuthError): string {
     default:
       return "No pudimos completar la operación. Inténtalo de nuevo.";
   }
-}
-
-function readForm(formData: FormData, key: string): string {
-  const value = formData.get(key);
-  return typeof value === "string" ? value : "";
 }
 
 // ---------------------------------------------------------------------------
