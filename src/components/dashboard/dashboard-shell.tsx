@@ -4,8 +4,9 @@ import { SiteLogo } from "@/components/layout/site-logo";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { DashboardNav } from "@/components/dashboard/dashboard-nav";
+import { AccountMenu } from "@/components/auth/account-menu";
 import { logoutAction } from "@/lib/auth/actions";
-import { ROLE_LABEL } from "@/lib/auth/roles";
+import { dashboardForRole, ROLE_LABEL } from "@/lib/auth/roles";
 import type { SessionProfile } from "@/lib/auth/session";
 import { cn } from "@/lib/utils";
 
@@ -61,10 +62,14 @@ export function DashboardShell({
       <div className="container-page grid flex-1 gap-6 py-6 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-10 lg:py-10">
         <aside className="lg:border-r lg:border-border lg:pr-6">
           <div className="mb-4 hidden lg:block">
-            <p className="truncate text-sm font-medium">{profile.fullName}</p>
-            <p className="truncate text-xs text-muted-foreground">
-              {profile.email}
-            </p>
+            <AccountMenu
+              user={{
+                fullName: profile.fullName,
+                role: profile.role,
+                dashboard: dashboardForRole(profile.role),
+              }}
+              email={profile.email}
+            />
           </div>
           <DashboardNav role={profile.role} />
         </aside>

@@ -1,7 +1,8 @@
--- ReCome · Fase 2: esquema completo de la base de datos.
+-- ReCome · Fases 1–6: esquema completo de la base de datos.
 --
 -- Archivo consolidado para pegar en el SQL Editor de Supabase.
--- Contiene, en orden, las 10 migraciones de supabase/migrations/.
+-- Contiene, en orden, las 13 migraciones de supabase/migrations/.
+-- Requiere Supabase con pg_cron disponible.
 --
 -- Cómo usarlo:
 --   1. Abre el proyecto en https://supabase.com/dashboard
@@ -1295,7 +1296,7 @@ revoke all on function public.deliver_reservation(uuid, text) from public;
 revoke all on function public.set_offer_stock(uuid, integer) from public;
 revoke all on function public.set_offer_status(uuid, public.offer_status) from public;
 revoke all on function public.archive_offer(uuid) from public;
-revoke all on function public.expire_reservations() from public;
+revoke all on function public.expire_reservations() from public, anon, authenticated;
 
 grant execute on function public.create_reservation(uuid, integer) to authenticated;
 grant execute on function public.cancel_reservation(uuid) to authenticated;
@@ -1682,7 +1683,7 @@ on storage.objects for insert
 to authenticated
 with check (
   bucket_id = 'avatars'
-  and (storage.foldername(name))[1] = (select auth.uid())::text
+  and (storage.foldername(storage.objects.name))[1] = (select auth.uid())::text
 );
 
 create policy storage_avatars_update_own
@@ -1690,11 +1691,11 @@ on storage.objects for update
 to authenticated
 using (
   bucket_id = 'avatars'
-  and (storage.foldername(name))[1] = (select auth.uid())::text
+  and (storage.foldername(storage.objects.name))[1] = (select auth.uid())::text
 )
 with check (
   bucket_id = 'avatars'
-  and (storage.foldername(name))[1] = (select auth.uid())::text
+  and (storage.foldername(storage.objects.name))[1] = (select auth.uid())::text
 );
 
 create policy storage_avatars_delete_own
@@ -1702,7 +1703,7 @@ on storage.objects for delete
 to authenticated
 using (
   bucket_id = 'avatars'
-  and (storage.foldername(name))[1] = (select auth.uid())::text
+  and (storage.foldername(storage.objects.name))[1] = (select auth.uid())::text
 );
 
 -- Logos y fotos de ofertas: el primer segmento es el id del comercio.
@@ -1715,7 +1716,7 @@ with check (
     select 1
     from public.businesses b
     where b.owner_id = (select auth.uid())
-      and b.id::text = (storage.foldername(name))[1]
+      and b.id::text = (storage.foldername(storage.objects.name))[1]
   )
 );
 
@@ -1728,7 +1729,7 @@ using (
     select 1
     from public.businesses b
     where b.owner_id = (select auth.uid())
-      and b.id::text = (storage.foldername(name))[1]
+      and b.id::text = (storage.foldername(storage.objects.name))[1]
   )
 )
 with check (
@@ -1737,7 +1738,7 @@ with check (
     select 1
     from public.businesses b
     where b.owner_id = (select auth.uid())
-      and b.id::text = (storage.foldername(name))[1]
+      and b.id::text = (storage.foldername(storage.objects.name))[1]
   )
 );
 
@@ -1750,7 +1751,7 @@ using (
     select 1
     from public.businesses b
     where b.owner_id = (select auth.uid())
-      and b.id::text = (storage.foldername(name))[1]
+      and b.id::text = (storage.foldername(storage.objects.name))[1]
   )
 );
 
@@ -2102,6 +2103,66 @@ using (
       and r.customer_id = (select auth.uid())
   )
 );
+
+-- 20261114100000_fase6_expiration_cron.sql
+-- Fase 6: vencimientos sin depender del navegador ni de un despliegue web.
+-- Supabase incluye pg_cron; ejecutar como postgres (SQL Editor o migraciones).
+-- El nombre estable actualiza el job existente al volver a ejecutar el script.
+create extension if not exists pg_cron with schema pg_catalog;
+
+-- Supabase puede conceder EXECUTE por privilegios por defecto directamente a
+-- anon/authenticated. Revocar PUBLIC no elimina esas concesiones explícitas.
+revoke all on function public.expire_reservations() from public, anon, authenticated;
+grant execute on function public.expire_reservations() to service_role;
+
+select cron.schedule(
+  'recome-expire-reservations',
+  '*/15 * * * *',
+  'select public.expire_reservations();'
+);
+
+
+-- 20261114110000_fase6_storage_owner_paths.sql
+-- En el EXISTS sobre businesses, `name` sin calificar se resuelve como
+-- businesses.name, no como storage.objects.name. Usar la ruta del objeto.
+alter policy storage_business_assets_insert_owner on storage.objects
+with check (
+  bucket_id in ('business-logos', 'offer-images')
+  and exists (
+    select 1 from public.businesses b
+    where b.owner_id = (select auth.uid())
+      and b.id::text = (storage.foldername(storage.objects.name))[1]
+  )
+);
+
+alter policy storage_business_assets_update_owner on storage.objects
+using (
+  bucket_id in ('business-logos', 'offer-images')
+  and exists (
+    select 1 from public.businesses b
+    where b.owner_id = (select auth.uid())
+      and b.id::text = (storage.foldername(storage.objects.name))[1]
+  )
+)
+with check (
+  bucket_id in ('business-logos', 'offer-images')
+  and exists (
+    select 1 from public.businesses b
+    where b.owner_id = (select auth.uid())
+      and b.id::text = (storage.foldername(storage.objects.name))[1]
+  )
+);
+
+alter policy storage_business_assets_delete_owner on storage.objects
+using (
+  bucket_id in ('business-logos', 'offer-images')
+  and exists (
+    select 1 from public.businesses b
+    where b.owner_id = (select auth.uid())
+      and b.id::text = (storage.foldername(storage.objects.name))[1]
+  )
+);
+
 
 -- ===========================================================================
 -- Verificación final

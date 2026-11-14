@@ -110,11 +110,10 @@ SQL Editor de Supabase o con `npx supabase db push`.
 El detalle del modelo, las políticas RLS, las funciones RPC y las instrucciones
 de aplicación está en [`docs/base-de-datos.md`](docs/base-de-datos.md).
 
-> Las migraciones de las Fases 2 y 3 están aplicadas al proyecto real de
-> Supabase. Las migraciones de las Fases 4 y 6 están en `supabase/fase4.sql` y
-> `supabase/fase6.sql`, scripts incrementales de una sola ejecución para ese
-> proyecto. `supabase/consolidado.sql` reúne las 11 migraciones para recrear el
-> esquema desde cero.
+> Esquema y correcciones de las Fases 1–6 verificados en el proyecto real de
+> Supabase el 14/11/2026. `supabase/fase4.sql` y `supabase/fase6.sql` permiten
+> actualizar instalaciones anteriores. `supabase/consolidado.sql` reúne las
+> 13 migraciones para instalaciones nuevas en Supabase con `pg_cron` disponible.
 
 El seed completo deja el sistema poblado con comercios, ofertas, cuentas de
 cliente, un administrador y reservas con historial:
@@ -135,7 +134,7 @@ protección de rutas y cuentas de prueba está en
 
 ## Estado del proyecto
 
-Fases 1, 2, 3, 4, 5 y 6 implementadas:
+Fases 1–6 cerradas funcionalmente el 14/11/2026:
 
 - proyecto Next.js, diseño base, identidad visual y landing responsive;
 - configuración de Supabase SSR;
@@ -159,16 +158,32 @@ Fases 1, 2, 3, 4, 5 y 6 implementadas:
 - gestión de reservas por el comercio, confirmación y entrega mediante la
   validación del código en `/negocio/entregas`;
 - supervisión de solo lectura de todas las reservas en `/admin/reservas`;
-- vencimiento automático de reservas con un endpoint de cron protegido por
-  `CRON_SECRET` (`vercel.json`).
+- vencimiento automático cada 15 minutos mediante Supabase `pg_cron`, con
+  ejecución exitosa observada; endpoint manual alternativo protegido por
+  `CRON_SECRET`, sin duplicar la programación en Vercel;
+- permisos de vencimiento limitados al servidor y políticas de Storage
+  corregidas para comprobar la ruta real del archivo;
+- callback local de autenticación permitido en Supabase.
 
-Las estadísticas y los reportes de la Fase 7 siguen pendientes. No hay pagos en
-línea ni datos simulados.
+La Fase 7 sigue pendiente por decisión del usuario: estadísticas, reportes,
+administración de usuarios, pruebas de concurrencia/responsive y preparación
+del despliegue. No hay pagos en línea. El seed contiene datos de demostración.
 
-> La Fase 6 tiene el código completo y verificado con `lint`, `tsc`, `build`,
-> pruebas REST y una prueba funcional en Chrome. Para que el historial de una
-> reserva inactiva muestre los datos de su oferta, aplica `supabase/fase6.sql`
-> en el proyecto de Supabase.
+Validación actual: ESLint y TypeScript correctos; 33 comprobaciones funcionales
+reales de Auth, comercios, ofertas, reservas y Storage, con limpieza de datos
+temporales, y 23 comprobaciones de rutas HTTP públicas y privadas. Ver
+[acta de cierre](docs/cierre-fase6.md).
+
+```bash
+node scripts/verify-phase6.mjs --run-remote
+```
+
+Requiere las variables de `.env.local` y la cuenta demo `admin@recome.test`.
+La prueba crea y elimina solo sus propios datos temporales.
+
+El build de producción sigue fallando en esta máquina con Next 16.4.6,
+Turbopack y Node 24.20.0 al crear el proceso de transformación CSS. Debe
+resolverse antes del despliegue, dentro de la Fase 7. No se ha desplegado.
 
 ## Despliegue en Vercel
 

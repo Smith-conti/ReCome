@@ -971,7 +971,7 @@ revoke all on function public.deliver_reservation(uuid, text) from public;
 revoke all on function public.set_offer_stock(uuid, integer) from public;
 revoke all on function public.set_offer_status(uuid, public.offer_status) from public;
 revoke all on function public.archive_offer(uuid) from public;
-revoke all on function public.expire_reservations() from public;
+revoke all on function public.expire_reservations() from public, anon, authenticated;
 
 grant execute on function public.create_reservation(uuid, integer) to authenticated;
 grant execute on function public.cancel_reservation(uuid) to authenticated;

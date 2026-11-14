@@ -8,6 +8,13 @@
 > Última actualización: **14 de noviembre de 2026** · Rama de trabajo: `master`
 > (Fases 1–6 commiteadas; ver estado de Git en la sección 15).
 
+> **Cierre funcional actualizado el 14/11/2026:** fases 1–6 verificadas en
+> Supabase real; permisos de vencimiento y Storage corregidos, cron operativo
+> y callback local configurado. La evidencia actual está en
+> [`docs/cierre-fase6.md`](docs/cierre-fase6.md). Los registros de pruebas y
+> commits anteriores de este documento son históricos; consultar `git status`
+> para las correcciones actuales. La Fase 7 permanece pendiente.
+
 ---
 
 ## 1. Qué es ReCome
@@ -33,12 +40,13 @@ La especificación completa, con las 7 fases y las decisiones cerradas, está en
 | 3 | Autenticación, sesiones, roles y protección de rutas | ✅ Completada y verificada en navegador |
 | 4 | Comercios y administración (registro, perfil, aprobación/suspensión) | ✅ Completada y validada por el usuario |
 | 5 | Ofertas (CRUD, imágenes, stock, catálogo, filtros) | ✅ Completada y verificada en navegador |
-| 6 | Reservas y recojos (crear, cancelar, vencer, entregar, historial) | ✅ Código completo y verificado · ⏳ falta aplicar `fase6.sql` |
+| 6 | Reservas y recojos (crear, cancelar, vencer, entregar, historial) | ✅ Cerrada funcionalmente: historial, permisos, Storage y cron verificados |
 | 7 | Estadísticas, pruebas y despliegue | ⏳ Pendiente |
 
 Hay 7 tablas, 6 categorías y 3 buckets creados en el proyecto real de Supabase,
-con 7 comercios y 19 ofertas de prueba. Las migraciones de las Fases 2, 4 y 6
-están aplicadas o listas para aplicar. La Fase 5 no requirió cambios de esquema:
+con comercios y ofertas de prueba. El esquema de las Fases 2, 4 y 6 está
+aplicado; se añadieron dos migraciones de corrección operativa al cierre.
+La Fase 5 no requirió cambios de esquema:
 reutiliza las RPC y las políticas existentes.
 
 **Nada está desplegado.** No afirmar lo contrario.
@@ -144,16 +152,16 @@ reservas demo):
 
 ---
 
-## 4. Configuración externa pendiente (bloquea flujos de correo)
+## 4. Configuración externa de autenticación
 
-En Supabase → **Authentication → URL Configuration → Redirect URLs**, añadir:
+En Supabase → **Authentication → URL Configuration** se verificó y guardó:
 
-- `http://localhost:3000/**` (desarrollo)
-- `https://<dominio-real>/**` (cuando exista el despliegue)
+- Site URL: `http://localhost:3000`.
+- Redirect URL: `http://localhost:3000/**` (desarrollo).
 
-Sin esto, los enlaces de **confirmación de cuenta** y de **recuperación de
-contraseña** no vuelven a la aplicación. El registro funciona, pero el correo
-llega con un enlace que Supabase rechaza.
+La configuración local ya no está pendiente. La URL del dominio real se
+configurará con el despliegue en Fase 7. No se ha verificado la entrega de
+correo en un buzón real; las cuentas `.test` no reciben correo.
 
 `mailer_autoconfirm = false` significa que **cada cuenta nueva debe confirmar el
 correo antes de entrar**. Para probar sin correo, crear la cuenta con
@@ -300,7 +308,7 @@ src/
 
 supabase/
 ├── config.toml
-├── migrations/                11 migraciones en orden
+├── migrations/                13 migraciones en orden
 ├── consolidado.sql            las 11 en un solo script transaccional
 ├── fase4.sql                  las 2 de la Fase 4, para el proyecto ya existente
 ├── fase6.sql                  la de la Fase 6, para el proyecto ya existente
@@ -631,16 +639,12 @@ src/lib/auth/{actions,action-state}.ts                            migrados a fie
   horarios y ofertas. Sin sesión, las rutas privadas redirigen a
   `/login?next=…`.
 
-### 11.5 Pendiente para cerrar la fase
+### 11.5 Cierre de la fase
 
-1. **Aplicar `supabase/fase4.sql`** en Supabase → SQL Editor (requiere acceso al
-   panel; el proyecto solo tiene claves publishable/secret, no DDL). Debe
-   devolver `funciones = 23` y `politicas = 21`.
-2. Tras aplicarlo, probar en navegador: alta de un comercio nuevo, aprobación,
-   rechazo con motivo, reenvío del dueño, suspensión y reactivación, accesos
-   cruzados y estados vacíos.
-3. Confirmar que ya no aparece `infinite recursion detected in policy for
-   relation "businesses"` al dar de alta.
+Las cuatro RPC administrativas existen en Supabase real. En el cierre se
+repitieron alta del comercio bajo RLS, aprobación, suspensión y reactivación
+mediante las API reales, con datos temporales y sin recursión al dar de alta.
+La validación previa del usuario sigue registrada en la tabla de estado.
 
 ---
 
@@ -743,19 +747,17 @@ src/app/admin/dashboard/page.tsx                     acceso a /admin/ofertas
 - El build detectó que las fichas dinámicas necesitaban `instant = false`;
   corregido y verificado en un segundo build.
 
-### 12.5 Pendiente para cerrar la fase
+### 12.5 Cierre de la fase
 
-1. Probar en navegador con una cuenta `BUSINESS` real: crear un borrador, subir
-   una imagen, publicarlo, verlo en `/ofertas`, abrir su ficha, pausarlo,
-   cambiar el stock y archivarlo.
-2. Probar `/admin/ofertas` con la cuenta `ADMIN`.
-3. Crear ofertas nuevas: los horarios del seed ya vencieron y solo queda una
-   oferta activa en el catálogo público.
-4. Revisar consola del navegador y log del servidor; después commitear la fase.
+Se verificaron creación/publicación, lectura pública, pausa y archivado con
+reservas asociadas. Se corrigió una referencia ambigua en las políticas de
+Storage y se comprobó una subida real del propietario y el rechazo de otro
+usuario. Las fechas del catálogo demo se renuevan con el script de ofertas
+vigentes cuando sea necesario; no es un pendiente de implementación.
 
 ---
 
-## 13. Fase 6 — Reservas y recojos ✅ (código)
+## 13. Fase 6 — Reservas y recojos ✅ (cierre funcional)
 
 ### 13.1 Qué se implementó
 
@@ -771,7 +773,8 @@ src/app/admin/dashboard/page.tsx                     acceso a /admin/ofertas
 - `/negocio/entregas` con el formulario de validación del código y la cola de
   reservas pendientes/confirmadas.
 - `/admin/reservas` de solo lectura, sin códigos.
-- `/api/cron/expire-reservations` + `vercel.json` (cron cada 15 minutos).
+- `pg_cron` cada 15 minutos en Supabase; endpoint protegido de vencimiento
+  como alternativa manual, sin programación duplicada en `vercel.json`.
 - Navegación por rol y dashboards de cliente/comercio con datos reales.
 
 ### 13.2 Decisiones técnicas
@@ -782,8 +785,9 @@ src/app/admin/dashboard/page.tsx                     acceso a /admin/ofertas
 - Solo se añadió una política nueva, `offers_select_customer_reservations`, para
   que el cliente lea sus ofertas ya inactivas. No se añadió una política de
   `businesses` para evitar recursión.
-- `expire_reservations` se ejecuta con `SUPABASE_SECRET_KEY`; el endpoint exige
-  `Authorization: Bearer <CRON_SECRET>`.
+- `expire_reservations` se ejecuta directamente mediante `pg_cron`. Si se usa
+  el endpoint alternativo, exige `Authorization: Bearer <CRON_SECRET>` y usa
+  `SUPABASE_SECRET_KEY`. Clientes y visitantes no tienen EXECUTE sobre la RPC.
 - El aviso de cancelación usa redirección a `?cancelada=1` porque la
   revalidación borraba el estado de `useActionState`.
 - `/ofertas/[id]` llama `await connection()` antes de `new Date()` para evitar
@@ -814,11 +818,17 @@ src/app/admin/dashboard/page.tsx                     acceso a /admin/ofertas
   consola limpia y sin respuestas HTTP de error.
 - Datos de prueba eliminados y cuenta `cliente.prueba@recome.test` borrada.
 
-### 13.5 Pendiente para cerrar la fase
+### 13.5 Cierre de la fase (14/11/2026)
 
-1. Aplicar `supabase/fase6.sql` en el proyecto de Supabase para habilitar la
-   lectura del historial de ofertas inactivas.
-2. Validación del usuario antes de empezar la Fase 7.
+La política de historial ya estaba aplicada. Se cerraron los pendientes reales:
+permisos exclusivos del servidor para vencer reservas, corrección de Storage
+y job `pg_cron` cada 15 minutos con ejecución `succeeded` observada. La Fase 7
+queda pendiente por instrucción del usuario; no se inicia automáticamente.
+
+`node scripts/verify-phase6.mjs --run-remote` completó 33 comprobaciones reales
+y limpió sus datos temporales. ESLint y TypeScript pasan; la aplicación
+responde HTTP 200 en desarrollo. El fallo actual del build de producción se
+registra en la Fase 7, sin darlo por aprobado. Ver `docs/cierre-fase6.md`.
 
 ---
 
@@ -951,14 +961,11 @@ Si retomas el proyecto, en este orden:
 
 ## 19. Próximo paso concreto
 
-1. Aplicar `supabase/fase6.sql` en Supabase (SQL Editor → New query → Run)
-   para habilitar la lectura del historial de ofertas inactivas.
-2. Validar la Fase 6 con el usuario: reservar una oferta desde una cuenta
-   `CLIENT`, confirmarla y entregarla con el comercio, y revisar el historial.
-3. La demo ya está cargada: `node supabase/seed/demo.mjs` deja 6 clientes,
-   20 reservas y el historial de los últimos días. Si las ofertas se vencen,
-   ejecutar `node supabase/seed/ofertas-vigentes.mjs` y después
-   `node supabase/seed/demo.mjs --reset` para regenerar las reservas.
-4. Con la Fase 6 validada, empezar la Fase 7 (estadísticas, pruebas de
-   concurrencia y preparación del despliegue). **No afirmar que está desplegado
-   hasta desplegarlo de verdad.**
+Las fases 1–6 están cerradas funcionalmente. Mantener la Fase 7 pendiente
+hasta que el usuario la solicite: estadísticas/reportes, administración de
+usuarios, pruebas ampliadas, resolución del fallo del build y despliegue.
+Consultar `docs/cierre-fase6.md` para reproducir la verificación actual.
+
+Si caducan las ofertas demo, usar `node supabase/seed/ofertas-vigentes.mjs`.
+No recrear ni limpiar reservas existentes como parte del arranque normal.
+**No afirmar que está desplegado hasta desplegarlo de verdad.**

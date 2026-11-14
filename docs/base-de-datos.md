@@ -1,11 +1,10 @@
 # Base de datos y seguridad
 
-Estado de las Fases 2 y 4. Las migraciones están escritas, probadas localmente y
-**aplicadas al proyecto real de Supabase hasta la Fase 3**: 7 tablas, 6
-categorías, 3 buckets, 18 funciones y 21 políticas RLS en `public`. Las dos
-migraciones de la Fase 4 (revisión administrativa de comercios) están en
-`supabase/fase4.sql` y todavía deben aplicarse en ese proyecto: dejan 23
-funciones y 21 políticas.
+Esquema de las Fases 1–6 verificado en el proyecto real de Supabase el
+14/11/2026: 7 tablas con RLS, categorías y buckets, RPC administrativas,
+política de lectura del historial y cron de vencimientos operativo. Se
+corrigieron permisos de `expire_reservations` y la referencia a la ruta del
+archivo en las políticas de Storage. Ver [acta de cierre](cierre-fase6.md).
 
 ## Migraciones
 
@@ -23,6 +22,9 @@ Ubicación: `supabase/migrations/`. Se ejecutan en orden:
 | `20261111090700_seed_categories.sql` | 6 categorías iniciales (idempotente) |
 | `20261113090000_admin_business_functions.sql` | RPC de aprobación, rechazo, suspensión y reenvío |
 | `20261113091000_business_insert_policy.sql` | Helper `has_role` y política de alta de comercios |
+| `20261114090000_fase6_offer_history.sql` | Lectura de ofertas inactivas desde reservas propias |
+| `20261114100000_fase6_expiration_cron.sql` | Permisos exclusivos del servidor y cron cada 15 minutos |
+| `20261114110000_fase6_storage_owner_paths.sql` | Propiedad de imágenes comprobada contra `storage.objects.name` |
 
 ## Cómo aplicar
 
@@ -37,9 +39,13 @@ termina con una verificación que debe devolver:
 |---|---|
 | 23 | 21 |
 
-Para recrear el esquema desde cero, usa `supabase/consolidado.sql`: contiene
-las 10 migraciones en orden, dentro de una sola transacción y con una
-verificación final.
+Para actualizar un proyecto que ya tiene la Fase 4, ejecuta `supabase/fase6.sql`.
+El proyecto actual ya tiene aplicados el historial y las dos correcciones.
+Este script también crea o actualiza el job `recome-expire-reservations`.
+
+Para recrear el esquema desde cero en Supabase con `pg_cron` disponible, usa
+`supabase/consolidado.sql`: contiene las 13 migraciones en orden, dentro de
+una sola transacción y con una verificación final.
 
 1. Abre el proyecto en <https://supabase.com/dashboard>.
 2. Entra en **SQL Editor > New query**.
@@ -169,8 +175,8 @@ Notas de implementación:
   bloqueada. La entrega repetida es idempotente.
 - `cancel_reservation` y `expire_reservations` devuelven el stock solo cuando la
   transición de estado se aplica realmente, por lo que son idempotentes.
-- `expire_reservations` está pensada para un endpoint de Vercel Cron protegido
-  con `CRON_SECRET` (Fase 6).
+- `expire_reservations` corre mediante `pg_cron` cada 15 minutos. El endpoint
+  HTTP protegido con `CRON_SECRET` queda como alternativa manual.
 - `approve_business` es idempotente: aprobar dos veces no duplica la auditoría.
   También reactiva un comercio `SUSPENDED`, limpia `rejection_reason` y fija
   `approved_at`.
@@ -237,12 +243,16 @@ devolvió `tablas = 7`, `categorias = 6`, `buckets = 3`, con 23 funciones, 6
 triggers y 21 políticas RLS en `public`. `supabase/fase4.sql` se probó sobre un
 esquema de Fase 2 y devolvió los mismos conteos.
 
-Pendiente de verificar dentro de las fases siguientes:
+Verificación actual de cierre (14/11/2026): 33 comprobaciones reales con
+`node scripts/verify-phase6.mjs --run-remote`, incluidos aprobación, subida
+de imágenes por el dueño, rechazo de otro usuario, reservas, entrega,
+cancelación e historial. Los datos temporales se limpian al terminar.
+El cron registra una ejecución `succeeded` y clientes/visitantes no tienen
+permiso de ejecutar `expire_reservations`.
 
-1. Aplicar `supabase/fase4.sql` al proyecto real y repetir el ciclo de revisión.
-2. Probar la reserva concurrente con un script SQL (Fase 7).
-3. Configurar el cron de vencimientos (Fase 6).
-4. Confirmar las políticas de Storage al subir la primera imagen real (Fase 5).
+Pendiente de la Fase 7: pruebas de concurrencia, auditoría ampliada de roles y
+RLS, responsive y preparación del despliegue. La suite funcional anterior no
+sustituye esas pruebas.
 
 ## Datos de prueba
 

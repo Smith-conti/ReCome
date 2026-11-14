@@ -45,7 +45,7 @@ on storage.objects for insert
 to authenticated
 with check (
   bucket_id = 'avatars'
-  and (storage.foldername(name))[1] = (select auth.uid())::text
+  and (storage.foldername(storage.objects.name))[1] = (select auth.uid())::text
 );
 
 create policy storage_avatars_update_own
@@ -53,11 +53,11 @@ on storage.objects for update
 to authenticated
 using (
   bucket_id = 'avatars'
-  and (storage.foldername(name))[1] = (select auth.uid())::text
+  and (storage.foldername(storage.objects.name))[1] = (select auth.uid())::text
 )
 with check (
   bucket_id = 'avatars'
-  and (storage.foldername(name))[1] = (select auth.uid())::text
+  and (storage.foldername(storage.objects.name))[1] = (select auth.uid())::text
 );
 
 create policy storage_avatars_delete_own
@@ -65,7 +65,7 @@ on storage.objects for delete
 to authenticated
 using (
   bucket_id = 'avatars'
-  and (storage.foldername(name))[1] = (select auth.uid())::text
+  and (storage.foldername(storage.objects.name))[1] = (select auth.uid())::text
 );
 
 -- Logos y fotos de ofertas: el primer segmento es el id del comercio.
@@ -78,7 +78,7 @@ with check (
     select 1
     from public.businesses b
     where b.owner_id = (select auth.uid())
-      and b.id::text = (storage.foldername(name))[1]
+      and b.id::text = (storage.foldername(storage.objects.name))[1]
   )
 );
 
@@ -91,7 +91,7 @@ using (
     select 1
     from public.businesses b
     where b.owner_id = (select auth.uid())
-      and b.id::text = (storage.foldername(name))[1]
+      and b.id::text = (storage.foldername(storage.objects.name))[1]
   )
 )
 with check (
@@ -100,7 +100,7 @@ with check (
     select 1
     from public.businesses b
     where b.owner_id = (select auth.uid())
-      and b.id::text = (storage.foldername(name))[1]
+      and b.id::text = (storage.foldername(storage.objects.name))[1]
   )
 );
 
@@ -113,6 +113,6 @@ using (
     select 1
     from public.businesses b
     where b.owner_id = (select auth.uid())
-      and b.id::text = (storage.foldername(name))[1]
+      and b.id::text = (storage.foldername(storage.objects.name))[1]
   )
 );

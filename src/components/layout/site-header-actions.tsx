@@ -2,23 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  ChevronDown,
-  LayoutDashboard,
-  LogOut,
-  Menu,
-  UserRound,
-} from "lucide-react";
+import { LogOut, Menu } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { AccountMenu, type AccountMenuUser } from "@/components/auth/account-menu";
 import {
   Sheet,
   SheetClose,
@@ -28,14 +14,10 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { logoutAction } from "@/lib/auth/actions";
-import { ROLE_LABEL, type UserRole } from "@/lib/auth/roles";
+import { ROLE_LABEL } from "@/lib/auth/roles";
 import { cn } from "@/lib/utils";
 
-export type HeaderUser = {
-  fullName: string;
-  role: UserRole;
-  dashboard: string;
-};
+export type HeaderUser = AccountMenuUser;
 
 const navLinks = [
   { href: "/ofertas", label: "Ofertas" },
@@ -43,19 +25,6 @@ const navLinks = [
   { href: "/#como-funciona", label: "Cómo funciona" },
   { href: "/#comercios", label: "Para comercios" },
 ];
-
-function initials(fullName: string): string {
-  const parts = fullName.trim().split(/\s+/).filter(Boolean);
-
-  if (parts.length === 0) return "R";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-
-  return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-}
-
-function firstName(fullName: string): string {
-  return fullName.trim().split(/\s+/)[0] ?? "Mi cuenta";
-}
 
 export function SiteHeaderActions({ user }: { user: HeaderUser | null }) {
   const pathname = usePathname();
@@ -84,58 +53,7 @@ export function SiteHeaderActions({ user }: { user: HeaderUser | null }) {
 
       <div className="hidden items-center gap-2 md:flex">
         {user ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              className={buttonVariants({
-                variant: "secondary",
-                className: "h-9 gap-2 px-2.5",
-              })}
-            >
-              <span className="grid size-6 place-items-center rounded-full bg-primary text-[0.65rem] font-semibold text-primary-foreground">
-                {initials(user.fullName)}
-              </span>
-              <span className="max-w-28 truncate">{firstName(user.fullName)}</span>
-              <ChevronDown
-                className="size-3.5 opacity-60"
-                aria-hidden="true"
-              />
-              <span className="sr-only">Abrir menú de cuenta</span>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-60">
-              <DropdownMenuGroup>
-                <DropdownMenuLabel>
-                  <span className="block truncate text-sm font-medium text-foreground">
-                    {user.fullName}
-                  </span>
-                  <span className="block text-xs text-muted-foreground">
-                    {ROLE_LABEL[user.role]}
-                  </span>
-                </DropdownMenuLabel>
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem render={<Link href={user.dashboard} />}>
-                <LayoutDashboard aria-hidden="true" />
-                Mi panel
-              </DropdownMenuItem>
-              {user.role === "CLIENT" ? (
-                <DropdownMenuItem render={<Link href="/cliente/perfil" />}>
-                  <UserRound aria-hidden="true" />
-                  Mi perfil
-                </DropdownMenuItem>
-              ) : null}
-              <DropdownMenuSeparator />
-              <form action={logoutAction}>
-                <DropdownMenuItem
-                  variant="destructive"
-                  nativeButton
-                  render={<button type="submit" className="w-full" />}
-                >
-                  <LogOut aria-hidden="true" />
-                  Cerrar sesión
-                </DropdownMenuItem>
-              </form>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <AccountMenu user={user} />
         ) : (
           <>
             <Link

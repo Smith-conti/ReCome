@@ -10,7 +10,7 @@ Cada usuario tiene un único rol en `public.profiles.role`:
 |---|---|---|
 | `CLIENT` | `/cliente` | Editar su perfil, reservar y cancelar sus reservas (Fase 6) |
 | `BUSINESS` | `/negocio` | Administrar su establecimiento y sus ofertas cuando esté aprobado |
-| `ADMIN` | `/admin` | Revisar comercios, gestionar usuarios y supervisar la plataforma |
+| `ADMIN` | `/admin` | Revisar comercios y supervisar ofertas y reservas; gestión de usuarios pendiente en Fase 7 |
 
 El rol se guarda en la base de datos, no en el cliente. El formulario de
 registro solo permite `CLIENT` y `BUSINESS`; `ADMIN` se asigna con la clave
@@ -31,10 +31,11 @@ secreta desde el SQL Editor o con la API de administración.
 
 En el proyecto actual `mailer_autoconfirm` está en `false`: cada cuenta nueva
 debe confirmar su correo antes de ingresar. Para que los enlaces funcionen en
-desarrollo, agrega `http://localhost:3000/**` en **Authentication → URL
-Configuration → Redirect URLs**. En producción agrega el dominio real. Sin esa
-configuración Supabase rechaza el `emailRedirectTo` y el enlace no vuelve a la
-aplicación.
+desarrollo, `http://localhost:3000/**` ya está guardado en **Authentication → URL
+Configuration → Redirect URLs** (verificado el 14/11/2026), y Site URL es
+`http://localhost:3000`. Al desplegar, agrega el dominio real. La recepción de
+correo en un buzón real depende de SMTP y no se verificó con las cuentas
+`@recome.test`, que no reciben correo.
 
 La entrega de correos usa el SMTP de Supabase, con límites de frecuencia. Para
 producción conviene configurar un SMTP propio en **Authentication → SMTP**.

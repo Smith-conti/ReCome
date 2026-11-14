@@ -4,9 +4,10 @@ import { createClient } from "@supabase/supabase-js";
 /**
  * Vencimiento automático de reservas.
  *
- * Vercel Cron llama a esta ruta cada 15 minutos y añade la cabecera
- * `Authorization: Bearer <CRON_SECRET>` cuando la variable existe en el
- * proyecto. La función SQL `expire_reservations` solo está concedida a
+ * La programación activa corre directamente en Supabase mediante pg_cron.
+ * Esta ruta queda como alternativa manual, o para un futuro scheduler HTTP,
+ * con la cabecera `Authorization: Bearer <CRON_SECRET>`.
+ * La función SQL `expire_reservations` solo está concedida a
  * `service_role`, por eso aquí se usa la clave secreta y nunca la del
  * navegador.
  */

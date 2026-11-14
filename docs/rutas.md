@@ -121,9 +121,11 @@ Los índices de cada área redirigen a su dashboard.
   reserva y solo un administrador puede revisarla.
 - El cliente puede cancelar mientras el horario de recojo no haya empezado; la
   cancelación devuelve el stock y redirige con un aviso visible.
-- `expire_reservations` corre desde `/api/cron/expire-reservations` cada 15
-  minutos (`vercel.json`), protegido con `CRON_SECRET` y la clave secreta de
-  Supabase. Marca `EXPIRED` y devuelve el stock.
+- `expire_reservations` corre cada 15 minutos desde Supabase `pg_cron`
+  (`recome-expire-reservations`). Marca `EXPIRED` y devuelve el stock. No
+  depende de Vercel ni de abrir una página. `/api/cron/expire-reservations`
+  permanece como alternativa manual protegida por `CRON_SECRET` y la clave
+  secreta; no hay una segunda programación en `vercel.json`.
 - `/admin/reservas` es de solo lectura y no expone códigos de recojo.
 - Para leer los datos de una oferta ya inactiva desde el historial del cliente,
   `supabase/fase6.sql` añade la política `offers_select_customer_reservations`.
