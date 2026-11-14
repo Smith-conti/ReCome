@@ -484,7 +484,8 @@ mutación vuelve a comprobar sesión y propiedad.
 
 ## 9. Cuentas de prueba
 
-Contraseña única: **`ReCome2026!`** (también listadas en `Cuentas.txt`).
+Contraseña única: **`ReCome2026!`** (lista completa con qué probar en cada
+cuenta: `cuentas.md`; versión plana: `Cuentas.txt`).
 
 | Correo | Rol | Comercio / notas |
 |---|---|---|
