@@ -207,6 +207,40 @@ async function AdminDashboardContent() {
           )}
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <ShoppingBag className="size-4 text-primary" aria-hidden="true" />
+              Catálogo de ofertas
+            </CardTitle>
+            <CardDescription>
+              Consulta las ofertas de todos los comercios y su estado de
+              publicación.
+            </CardDescription>
+          </div>
+          <Link
+            href="/admin/ofertas"
+            className={buttonVariants({
+              variant: "outline",
+              size: "sm",
+              className: "h-8",
+            })}
+          >
+            Ver ofertas
+            <ChevronRight className="size-3.5" aria-hidden="true" />
+          </Link>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Hay {activeOffers.count ?? 0}{" "}
+            {activeOffers.count === 1 ? "oferta activa" : "ofertas activas"} en
+            el catálogo público. El listado administrativo incluye también
+            borradores, ofertas pausadas, agotadas y archivadas.
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, LayoutDashboard, Store, UserRound } from "lucide-react";
+import {
+  Building2,
+  LayoutDashboard,
+  ShoppingBag,
+  Store,
+  UserRound,
+} from "lucide-react";
 import type { UserRole } from "@/lib/auth/roles";
 import { cn } from "@/lib/utils";
 
@@ -16,11 +22,13 @@ const NAV_BY_ROLE: Record<
   ],
   BUSINESS: [
     { href: "/negocio/dashboard", label: "Resumen", icon: LayoutDashboard },
+    { href: "/negocio/ofertas", label: "Ofertas", icon: ShoppingBag },
     { href: "/negocio/perfil", label: "Mi establecimiento", icon: Store },
   ],
   ADMIN: [
     { href: "/admin/dashboard", label: "Resumen", icon: LayoutDashboard },
     { href: "/admin/negocios", label: "Comercios", icon: Building2 },
+    { href: "/admin/ofertas", label: "Ofertas", icon: ShoppingBag },
   ],
 };
 

@@ -73,14 +73,16 @@ src/
 │   ├── layout/        # cabecera, pie y logo
 │   ├── auth/          # formularios de acceso y perfil
 │   ├── business/      # formulario de establecimiento
+│   ├── offers/        # tarjetas, formulario, imagen, estado y stock
 │   ├── admin/         # panel de revisión de comercios
 │   ├── dashboard/     # estructura de los paneles privados
 │   └── public/        # componentes de páginas públicas
 ├── lib/
 │   ├── auth/          # sesión, roles, rutas y Server Actions
 │   ├── business/      # consultas y Server Actions de comercios
+│   ├── offers/        # tipos, consultas, Server Actions y estado
 │   ├── supabase/      # clientes de navegador y servidor
-│   ├── validations/   # esquemas Zod
+│   ├── validations/   # esquemas Zod (incluye ofertas)
 │   ├── format.ts      # formatos de fecha, hora y moneda
 │   └── utils.ts
 ├── services/          # lógica de acceso a datos (fases siguientes)
@@ -119,7 +121,7 @@ protección de rutas y cuentas de prueba está en
 
 ## Estado del proyecto
 
-Fases 1, 2, 3 y 4 implementadas:
+Fases 1, 2, 3, 4 y 5 implementadas:
 
 - proyecto Next.js, diseño base, identidad visual y landing responsive;
 - configuración de Supabase SSR;
@@ -132,14 +134,20 @@ Fases 1, 2, 3 y 4 implementadas:
 - revisión administrativa: lista con filtros, detalle con datos del dueño y
   acciones de aprobar, rechazar, suspender y reactivar;
 - reenvío de una solicitud rechazada por parte del dueño;
-- cambio de estado solo mediante RPC `security definer` con auditoría.
+- cambio de estado solo mediante RPC `security definer` con auditoría;
+- gestión de ofertas del comercio: borradores, edición, imagen en Supabase
+  Storage, stock, publicación, pausa y archivado;
+- catálogo público `/ofertas` con búsqueda y filtro por categoría, ficha de
+  oferta `/ofertas/[id]`, directorio `/establecimientos` y ficha por comercio;
+- consulta administrativa de todas las ofertas en `/admin/ofertas`.
 
-Las rutas de catálogo y la gestión de ofertas muestran estados vacíos
-explícitos hasta que se implementen sus fases. No hay pagos en línea ni datos
-simulados.
+Las rutas de reservas y los reportes seguirán mostrando estados vacíos
+explícitos hasta que se implementen las fases 6 y 7. No hay pagos en línea ni
+datos simulados.
 
-La Fase 4 necesita que se aplique `supabase/fase4.sql` en el proyecto de
-Supabase antes de probar la aprobación de comercios.
+> La Fase 4 está cerrada y validada. La Fase 5 tiene el código completo y
+> verificado con `lint`, `tsc` y `build`; falta la prueba funcional en navegador
+> con cuentas reales.
 
 ## Despliegue en Vercel
 

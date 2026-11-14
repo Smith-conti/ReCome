@@ -5,9 +5,8 @@
 > proyecto, cómo se levanta, qué está hecho, qué falta, qué reglas no se pueden
 > romper y qué trampas ya se resolvieron.
 >
-> Última actualización: **13 de noviembre de 2026** · Rama de trabajo: `master`
-> (commit `7c4448e` «Fases 1 y 2 completas» + cambios de Fases 3 y 4 sin
-> commitear).
+> Última actualización: **14 de noviembre de 2026** · Rama de trabajo: `master`
+> (commit `79358d1` «Fase 4 - Completado» + cambios de la Fase 5 sin commitear).
 
 ---
 
@@ -32,15 +31,15 @@ La especificación completa, con las 7 fases y las decisiones cerradas, está en
 | 1 | Preparación del proyecto (Next.js, Tailwind, shadcn, Supabase SSR, landing) | ✅ Completada y verificada |
 | 2 | Base de datos, RLS y funciones transaccionales | ✅ Completada y **aplicada al proyecto real** |
 | 3 | Autenticación, sesiones, roles y protección de rutas | ✅ Completada y verificada en navegador |
-| 4 | Comercios y administración (registro, perfil, aprobación/suspensión) | ✅ Código completo · ⏳ falta aplicar `fase4.sql` en Supabase y validar en navegador |
-| 5 | Ofertas (CRUD, imágenes, stock, catálogo, filtros) | ⏳ Pendiente |
+| 4 | Comercios y administración (registro, perfil, aprobación/suspensión) | ✅ Completada y validada por el usuario |
+| 5 | Ofertas (CRUD, imágenes, stock, catálogo, filtros) | ✅ Código completo · ⏳ falta probar en navegador |
 | 6 | Reservas y recojos (crear, cancelar, vencer, entregar, historial) | ⏳ Pendiente (RPC ya listas en la base) |
 | 7 | Estadísticas, pruebas y despliegue | ⏳ Pendiente |
 
 Hay 7 tablas, 6 categorías y 3 buckets creados en el proyecto real de Supabase,
-con 7 comercios y 19 ofertas de prueba. Las 8 migraciones de la Fase 2 están
-aplicadas; las 2 de la Fase 4 están en `supabase/fase4.sql`, pendientes de
-ejecutar en el SQL Editor.
+con 7 comercios y 19 ofertas de prueba. Las migraciones de las Fases 2 y 4 están
+aplicadas. La Fase 5 no requiere cambios de esquema: reutiliza las RPC y las
+políticas existentes.
 
 **Nada está desplegado.** No afirmar lo contrario.
 
@@ -218,6 +217,7 @@ src/
 │   ├── layout/                cabecera con menú de cuenta, pie, logo
 │   ├── auth/                  formularios y campos reutilizables
 │   ├── business/              formulario de establecimiento con horarios
+│   ├── offers/                formulario, imagen, tarjeta y acciones de oferta
 │   ├── admin/                 panel de revisión (aprobar/rechazar/suspender)
 │   ├── dashboard/             shell, navegación lateral y esqueletos
 │   └── public/                bloques de la landing y estados vacíos
@@ -233,6 +233,11 @@ src/
 │   │   ├── queries.ts         lecturas del panel admin y del propio comercio
 │   │   ├── actions.ts         Server Actions de alta, edición y revisión
 │   │   └── action-state.ts    estado de los formularios
+│   ├── offers/
+│   │   ├── types.ts           estados, etiquetas y categorías
+│   │   ├── queries.ts         catálogo, directorio, panel y admin
+│   │   ├── actions.ts         crear/editar, estado, stock y archivar
+│   │   └── action-state.ts    estado de los formularios
 │   ├── supabase/
 │   │   ├── client.ts          cliente de navegador
 │   │   ├── server.ts          cliente de servidor con cookies
@@ -241,6 +246,7 @@ src/
 │   ├── validations/
 │   │   ├── auth.ts            esquemas Zod de acceso y perfil
 │   │   ├── business.ts        esquema Zod del establecimiento
+│   │   ├── offer.ts           esquema Zod de la oferta y sus fechas
 │   │   └── errors.ts          fieldErrors / readForm compartidos
 │   ├── format.ts              fecha, hora y moneda en America/Lima
 │   └── utils.ts               cn()
@@ -378,8 +384,11 @@ Lectura pública; 5 MB por archivo; solo `image/jpeg`, `image/png` o `image/webp
 
 | Ruta | Notas |
 |---|---|
-| `/` | Landing completa con ofertas destacadas (hoy vacías) |
-| `/ofertas`, `/establecimientos` | Página con estado vacío explícito |
+| `/` | Landing completa con ofertas destacadas reales dentro de un `Suspense` |
+| `/ofertas` | Catálogo público con búsqueda por título y filtro por categoría |
+| `/ofertas/[id]` | Ficha con precios, stock, horario, punto de recojo y datos del comercio |
+| `/establecimientos` | Directorio con búsqueda y filtro por tipo de comercio |
+| `/establecimientos/[slug]` | Ficha del comercio con sus ofertas activas |
 | `/login`, `/registro`, `/recuperar`, `/restablecer` | Fase 3 |
 | `/auth/callback` | Canjea el código de Supabase y redirige por rol |
 | `/cliente` | Redirige a `/cliente/dashboard` |
@@ -388,17 +397,20 @@ Lectura pública; 5 MB por archivo; solo `image/jpeg`, `image/png` o `image/webp
 | `/negocio` | Redirige a `/negocio/dashboard` |
 | `/negocio/dashboard` | Panel con el estado real del establecimiento y acceso a la edición |
 | `/negocio/perfil` | Alta (si no existe) y edición del establecimiento, con horarios semanales |
+| `/negocio/ofertas` | Listado por estado con búsqueda, contadores y acciones rápidas |
+| `/negocio/ofertas/nueva` | Formulario de creación; guarda como borrador |
+| `/negocio/ofertas/[id]/editar` | Edición, stock, publicación/pausa y archivado |
 | `/admin` | Redirige a `/admin/dashboard` |
 | `/admin/dashboard` | Contadores reales: pendientes, aprobados, clientes, ofertas activas |
 | `/admin/negocios` | Listado con filtro por estado, contadores y enlaces al detalle |
 | `/admin/negocios/[id]` | Datos del dueño, ubicación, horarios, ofertas y acciones de revisión |
+| `/admin/ofertas` | Listado de solo lectura con filtros por estado y título |
 
 ### Pendientes (fuente: sección 4 de `base-recome.md`)
 
 | Fase | Rutas |
 |---|---|
 | 4 | `/admin/usuarios` (diferida: el esquema no tiene estado de usuario) |
-| 5 | `/ofertas/[id]`, `/establecimientos/[slug]`, `/negocio/ofertas`, `/negocio/ofertas/nueva`, `/negocio/ofertas/[id]/editar`, `/admin/ofertas` |
 | 6 | `/cliente/reservas`, `/negocio/reservas`, `/negocio/entregas`, `/admin/reservas` |
 | 7 | `/admin/reportes` |
 
@@ -573,14 +585,118 @@ src/lib/auth/{actions,action-state}.ts                            migrados a fie
 
 ---
 
-## 12. Fases 5, 6 y 7 (alcance pendiente)
+## 12. Fase 5 — Ofertas ✅ (código)
 
-### Fase 5 — Ofertas
+Objetivo: que el comercio cree, publique y administre excedentes, y que el
+público los encuentre en el catálogo y en el directorio de establecimientos.
 
-Crear y editar ofertas, subir imágenes a `offer-images`, administrar stock,
-publicar/pausar, catálogo público real en `/ofertas`, detalle
-`/ofertas/[id]`, directorio `/establecimientos` y `/establecimientos/[slug]`,
-búsqueda y filtros. Las RPC de stock y estado ya existen.
+### 12.1 Qué se implementó
+
+1. **Panel de ofertas** `/negocio/ofertas`: listado con contadores por estado,
+   búsqueda por título, filtro por estado y acciones rápidas de publicar,
+   pausar o volver a borrador.
+2. **Alta y edición** `/negocio/ofertas/nueva` y
+   `/negocio/ofertas/[id]/editar`: título, categoría, descripción, precios,
+   cantidad total, horario de recojo, vencimiento, ingredientes, alérgenos,
+   conservación e imagen.
+3. **Imagen** subida directamente desde el navegador a Supabase Storage, en
+   `offer-images/{business_id}/{uuid}.{ext}`, con vista previa y opción de
+   quitarla.
+4. **Stock** ajustable con `set_offer_stock`; al llegar a cero la base marca la
+   oferta como `SOLD_OUT`.
+5. **Publicación, pausa y borrador** con `set_offer_status`; **archivado** con
+   `archive_offer`. La UI muestra «Archivada» a partir de `archived_at`.
+6. **Catálogo público** `/ofertas` con búsqueda por título, filtro por
+   categoría, contador de resultados, estados vacíos y tarjetas con precios,
+   descuento, stock y horario.
+7. **Ficha pública** `/ofertas/[id]` con imagen, precios, ahorro, stock,
+   horario, vencimiento, punto de recojo, datos del comercio y enlace a Google
+   Maps.
+8. **Directorio** `/establecimientos` con búsqueda y filtro por tipo, y ficha
+   `/establecimientos/[slug]` con datos de contacto, horarios y ofertas activas.
+9. **Administración de solo lectura** `/admin/ofertas`: todas las ofertas con
+   estado, precio, stock, recojo y enlace al comercio.
+10. **Landing**: la sección de ofertas destacadas ahora consulta datos reales
+    dentro de un límite de `Suspense`.
+11. **Navegación**: enlaces «Ofertas» en los paneles de comercio y
+    administración, y resumen de ofertas en el dashboard del comercio.
+
+### 12.2 Decisiones técnicas
+
+- La imagen **no pasa por una Server Action**: se sube desde el navegador con
+  `createClient()` de `src/lib/supabase/client.ts` y se guarda su URL pública.
+  Así se evita el límite de tamaño de las Server Actions.
+- `status`, `available_quantity`, `archived_at` y `business_id` no se envían
+  desde los formularios. La base tiene esas columnas revocadas para
+  `authenticated`; solo cambian con las RPC existentes.
+- Se permiten **borradores** aunque el comercio no esté aprobado, pero publicar
+  exige `APPROVED`. Lo garantizan la RPC, el trigger y la RLS.
+- El slug de la oferta lo genera el trigger `set_offer_slug()` en el `INSERT`;
+  el formulario envía `slug: ""` a propósito.
+- Las fechas de `<input type="datetime-local">` se interpretan como hora de
+  Perú (`-05:00`) y se convierten a ISO antes de guardar.
+- Los campos sensibles de fecha y precio se validan con Zod y también con las
+  restricciones de la tabla (`discounted_price < original_price`,
+  `pickup_end > pickup_start`, `expiration_at >= pickup_end`).
+- Las rutas dinámicas públicas usan `export const instant = false` y
+  `generateMetadata` empieza con `await connection()`, igual que el detalle
+  administrativo de la Fase 4.
+- Se usa `<img>` con `eslint-disable` para las URLs de Supabase, evitando
+  configurar dominios remotos en `next/image`.
+
+### 12.3 Archivos creados o modificados
+
+```text
+src/lib/validations/offer.ts                         Zod de la oferta
+src/lib/offers/{types,queries,actions,action-state}.ts dominio de ofertas
+src/lib/format.ts                                    precio, hora y fechas Lima
+src/components/offers/offer-card.tsx                 tarjeta pública y esqueletos
+src/components/offers/offer-form.tsx                 formulario de alta/edición
+src/components/offers/offer-image-field.tsx          subida a Storage
+src/components/offers/offer-status-actions.tsx       publicar/pausar/borrador
+src/components/offers/stock-form.tsx                 ajuste de stock
+src/components/offers/archive-offer-button.tsx       archivado con confirmación
+src/app/(public)/ofertas/page.tsx                    catálogo real
+src/app/(public)/ofertas/[id]/page.tsx               ficha pública
+src/app/(public)/establecimientos/page.tsx           directorio real
+src/app/(public)/establecimientos/[slug]/page.tsx    ficha del comercio
+src/app/negocio/ofertas/page.tsx                     panel de ofertas
+src/app/negocio/ofertas/nueva/page.tsx               alta
+src/app/negocio/ofertas/[id]/editar/page.tsx         edición y acciones
+src/app/admin/ofertas/page.tsx                       consulta administrativa
+src/components/public/featured-offers.tsx            destacadas con datos reales
+src/components/dashboard/dashboard-nav.tsx           enlaces de ofertas
+src/app/negocio/dashboard/page.tsx                   resumen de ofertas
+src/app/admin/dashboard/page.tsx                     acceso a /admin/ofertas
+```
+
+### 12.4 Verificación hecha
+
+- `npm run lint` sin errores.
+- `npx tsc --noEmit` sin errores después de `next build` (el build genera los
+  tipos `LayoutProps` de Next 16).
+- `npm run build` correcto: 27 rutas, incluidas las nuevas fichas dinámicas y
+  los paneles.
+- Consultas REST verificadas contra el Supabase real con la clave publicable:
+  los `select` anidados de oferta/comercio/categoría funcionan, el catálogo
+  devuelve solo ofertas activas, los borradores no son visibles para `anon` y
+  el directorio devuelve los 7 comercios aprobados.
+- El build detectó que las fichas dinámicas necesitaban `instant = false`;
+  corregido y verificado en un segundo build.
+
+### 12.5 Pendiente para cerrar la fase
+
+1. Probar en navegador con una cuenta `BUSINESS` real: crear un borrador, subir
+   una imagen, publicarlo, verlo en `/ofertas`, abrir su ficha, pausarlo,
+   cambiar el stock y archivarlo.
+2. Probar `/admin/ofertas` con la cuenta `ADMIN`.
+3. Crear ofertas nuevas: los horarios del seed ya vencieron y solo queda una
+   oferta activa en el catálogo público.
+4. Revisar consola del navegador y log del servidor; después commitear la fase.
+
+---
+
+## 13. Fases 6 y 7 (alcance pendiente)
 
 ### Fase 6 — Reservas y recojos
 
@@ -599,7 +715,7 @@ afirmar que está desplegado hasta desplegarlo de verdad.**
 
 ---
 
-## 13. Reglas de trabajo obligatorias
+## 14. Reglas de trabajo obligatorias
 
 Tomadas de la sección 15 de `base-recome.md`:
 
@@ -629,7 +745,7 @@ orden (4 → 5 → 6 → 7).
 
 ---
 
-## 14. Problemas conocidos y trampas ya resueltas
+## 15. Problemas conocidos y trampas ya resueltas
 
 | Síntoma | Causa | Solución aplicada |
 |---|---|---|
@@ -647,15 +763,14 @@ orden (4 → 5 → 6 → 7).
 | `Date.now() while prerendering` en `/admin/negocios/[id]` | `generateMetadata` leía Supabase antes de marcar la ruta como dinámica | `await connection()` al inicio de `generateMetadata` |
 | El navegador headless no muestra el contenido de `<Suspense>` | `requestAnimationFrame` se pausa si la ventana no está visible | No es un fallo de la app: el HTML servido sí trae el contenido; validar con `tabs.focus` o por HTTP |
 
-Estado de Git: hay cambios de las Fases 3 y 4 sin commitear (páginas y layouts de
-auth, paneles, `lib/auth`, `lib/business`, `components/business`,
-`components/admin`, `docs/`, `README.md`, `TRASPASO.md`, migraciones 9–10 y
-`supabase/fase4.sql`). Conviene commitear antes de empezar la Fase 5 para tener
-un punto de retorno limpio. `.env.local` no viaja con Git.
+Estado de Git: la Fase 4 está commiteada (`79358d1`). Quedan sin commitear los
+cambios de la Fase 5 (`src/lib/offers`, `src/components/offers`,
+`src/lib/validations/offer.ts`, las páginas públicas y privadas de ofertas,
+`docs/rutas.md`, `README.md` y este archivo). `.env.local` no viaja con Git.
 
 ---
 
-## 15. Checklist antes de dar una fase por terminada
+## 16. Checklist antes de dar una fase por terminada
 
 - [ ] La funcionalidad se probó en el navegador con una cuenta real.
 - [ ] Se probaron los accesos cruzados entre roles.
@@ -671,7 +786,7 @@ un punto de retorno limpio. `.env.local` no viaja con Git.
 
 ---
 
-## 16. Comandos útiles
+## 17. Comandos útiles
 
 ```bash
 npm install                 # dependencias
@@ -691,7 +806,7 @@ REST con `SUPABASE_SECRET_KEY` (nunca en el navegador).
 
 ---
 
-## 17. Archivos que hay que leer primero
+## 18. Archivos que hay que leer primero
 
 Si retomas el proyecto, en este orden:
 
@@ -704,15 +819,21 @@ Si retomas el proyecto, en este orden:
 6. `docs/autenticacion.md` — flujos y roles.
 7. `src/lib/business/actions.ts` — Server Actions de comercios.
 8. `src/app/admin/negocios/[id]/page.tsx` — detalle y acciones de revisión.
+9. `src/lib/offers/actions.ts` — Server Actions de ofertas.
+10. `src/app/negocio/ofertas/[id]/editar/page.tsx` — edición, stock y estado.
 
 ---
 
-## 18. Próximo paso concreto
+## 19. Próximo paso concreto
 
-1. **Aplicar `supabase/fase4.sql`** en Supabase → SQL Editor y comprobar que
-   devuelve `funciones = 23` y `politicas = 21`.
-2. Probar en navegador el ciclo completo con cuentas reales: alta de un comercio nuevo,
-   aprobación, rechazo con motivo, reenvío del dueño, suspensión y reactivación.
-3. Configurar las Redirect URLs en Supabase (sección 4), si aún no está hecho.
-4. Commitear el estado actual (Fases 3 y 4).
-5. Pedir validación de la Fase 4 antes de empezar la Fase 5 (ofertas).
+1. Probar la Fase 5 en navegador con una cuenta `BUSINESS` real: crear un
+   borrador, subir una imagen, publicarlo, verlo en `/ofertas`, abrir la ficha,
+   pausarlo, ajustar el stock y archivarlo.
+2. Probar `/admin/ofertas` con la cuenta `ADMIN` y confirmar que no aparecen
+   acciones que el esquema no registra.
+3. Crear un par de ofertas con horarios vigentes: las del seed ya vencieron y el
+   catálogo público muestra una sola oferta activa.
+4. Revisar la consola del navegador y el log del servidor; después commitear la
+   Fase 5.
+5. Pedir validación de la Fase 5 antes de empezar la Fase 6 (reservas y
+   recojos). Las RPC de reservas ya existen en la base.

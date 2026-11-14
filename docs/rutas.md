@@ -8,10 +8,10 @@ Los índices de cada área redirigen a su dashboard.
 | Ruta | Estado | Archivo |
 |---|---|---|
 | `/` | Implementado | `src/app/(public)/page.tsx` |
-| `/ofertas` | Estado vacío (Fase 5) | `src/app/(public)/ofertas/page.tsx` |
-| `/ofertas/[id]` | Pendiente (Fase 5) | — |
-| `/establecimientos` | Estado vacío (Fase 5) | `src/app/(public)/establecimientos/page.tsx` |
-| `/establecimientos/[slug]` | Pendiente (Fase 5) | — |
+| `/ofertas` | Implementado (Fase 5) | `src/app/(public)/ofertas/page.tsx` |
+| `/ofertas/[id]` | Implementado (Fase 5) | `src/app/(public)/ofertas/[id]/page.tsx` |
+| `/establecimientos` | Implementado (Fase 5) | `src/app/(public)/establecimientos/page.tsx` |
+| `/establecimientos/[slug]` | Implementado (Fase 5) | `src/app/(public)/establecimientos/[slug]/page.tsx` |
 
 ## Autenticación
 
@@ -39,9 +39,9 @@ Los índices de cada área redirigen a su dashboard.
 | `/negocio` | Implementado (redirige a `/negocio/dashboard`) | `src/app/negocio/page.tsx` |
 | `/negocio/dashboard` | Implementado (Fase 3; estado del establecimiento en Fase 4) | `src/app/negocio/dashboard/page.tsx` |
 | `/negocio/perfil` | Implementado (Fase 4) | `src/app/negocio/perfil/page.tsx` |
-| `/negocio/ofertas` | Pendiente (Fase 5) | — |
-| `/negocio/ofertas/nueva` | Pendiente (Fase 5) | — |
-| `/negocio/ofertas/[id]/editar` | Pendiente (Fase 5) | — |
+| `/negocio/ofertas` | Implementado (Fase 5) | `src/app/negocio/ofertas/page.tsx` |
+| `/negocio/ofertas/nueva` | Implementado (Fase 5) | `src/app/negocio/ofertas/nueva/page.tsx` |
+| `/negocio/ofertas/[id]/editar` | Implementado (Fase 5) | `src/app/negocio/ofertas/[id]/editar/page.tsx` |
 | `/negocio/reservas` | Pendiente (Fase 6) | — |
 | `/negocio/entregas` | Pendiente (Fase 6) | — |
 
@@ -54,7 +54,7 @@ Los índices de cada área redirigen a su dashboard.
 | `/admin/negocios` | Implementado (Fase 4) | `src/app/admin/negocios/page.tsx` |
 | `/admin/negocios/[id]` | Implementado (Fase 4) | `src/app/admin/negocios/[id]/page.tsx` |
 | `/admin/usuarios` | No implementado (el esquema no tiene estado de usuario) | — |
-| `/admin/ofertas` | Pendiente (Fase 5) | — |
+| `/admin/ofertas` | Implementado (Fase 5, solo lectura) | `src/app/admin/ofertas/page.tsx` |
 | `/admin/reservas` | Pendiente (Fase 6) | — |
 | `/admin/reportes` | Pendiente (Fase 7) | — |
 
@@ -83,3 +83,22 @@ Los índices de cada área redirigen a su dashboard.
 - Aprobar, rechazar y suspender exigen rol `ADMIN` en el servidor y en la RPC.
   Un acceso cruzado entre roles se resuelve con el guard del layout (redirige
   al dashboard propio), igual que en la Fase 3.
+
+## Reglas de la Fase 5
+
+- El comercio administra sus ofertas en `/negocio/ofertas`. Puede crear
+  borradores aunque su establecimiento siga en revisión, pero publicar exige
+  `APPROVED` (lo comprueban la RPC y el trigger de la base).
+- El formulario nunca envía `status`, `available_quantity`, `archived_at` ni
+  `business_id`: la propiedad sale de la sesión y esos campos solo cambian con
+  `set_offer_status`, `set_offer_stock` y `archive_offer`.
+- La imagen se sube desde el navegador a `offer-images/{business_id}/{uuid}` y
+  se guarda su URL pública. Límite: 5 MB, JPG/PNG/WebP.
+- El catálogo público solo muestra ofertas `ACTIVE`, sin archivar, con
+  `pickup_end` futuro y de comercios `APPROVED`; la RLS aplica la misma regla.
+- `/ofertas` busca por título y filtra por categoría con parámetros GET.
+  `/establecimientos` busca por nombre y filtra por tipo de comercio.
+- `/admin/ofertas` es de solo lectura: no inventa auditoría ni acciones
+  administrativas que el esquema no registra.
+- Las fechas de los formularios se interpretan en hora de Perú (UTC-5) y se
+  envían como ISO con desplazamiento `-05:00`.

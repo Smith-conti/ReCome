@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { CheckCircle2, Clock3, MapPin, Store, XCircle } from "lucide-react";
+import { CheckCircle2, Clock3, MapPin, Plus, ShoppingBag, Store, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -14,6 +14,7 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { requireSessionProfile } from "@/lib/auth/session";
 import { DashboardBodySkeleton } from "@/components/dashboard/dashboard-skeleton";
+import { countOwnOffers } from "@/lib/offers/queries";
 
 export const metadata: Metadata = {
   title: "Panel del comercio",
@@ -79,6 +80,8 @@ async function NegocioDashboardContent() {
     )
     .eq("owner_id", profile.id)
     .maybeSingle<BusinessRow>();
+
+  const counts = await countOwnOffers();
 
   return (
     <div className="space-y-6">
@@ -176,6 +179,86 @@ async function NegocioDashboardContent() {
           </CardContent>
         </Card>
       )}
+
+      {business ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ShoppingBag className="size-4 text-primary" aria-hidden="true" />
+              Tus ofertas
+            </CardTitle>
+            <CardDescription>
+              Publica excedentes, ajusta el stock y pausa las ofertas cuando ya
+              no estén disponibles.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <StatLink
+                href="/negocio/ofertas?estado=ACTIVE"
+                label="Publicadas"
+                value={counts.ACTIVE}
+              />
+              <StatLink
+                href="/negocio/ofertas?estado=DRAFT"
+                label="Borradores"
+                value={counts.DRAFT}
+              />
+              <StatLink
+                href="/negocio/ofertas?estado=SOLD_OUT"
+                label="Agotadas"
+                value={counts.SOLD_OUT}
+              />
+              <StatLink
+                href="/negocio/ofertas?estado=PAUSED"
+                label="Pausadas"
+                value={counts.PAUSED}
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/negocio/ofertas"
+                className={buttonVariants({
+                  variant: "outline",
+                  className: "h-9 px-4",
+                })}
+              >
+                Administrar ofertas
+              </Link>
+              <Link
+                href="/negocio/ofertas/nueva"
+                className={buttonVariants({
+                  className: "h-9 px-4",
+                })}
+              >
+                <Plus className="size-4" aria-hidden="true" />
+                Nueva oferta
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
+  );
+}
+
+function StatLink({
+  href,
+  label,
+  value,
+}: {
+  href: string;
+  label: string;
+  value: number;
+}) {
+  return (
+    <Link
+      href={href}
+      className="rounded-xl border border-border bg-background px-3 py-3 transition-colors hover:border-primary/40 hover:bg-secondary/40"
+    >
+      <p className="text-2xl font-semibold">{value}</p>
+      <p className="text-xs text-muted-foreground">{label}</p>
+    </Link>
   );
 }
