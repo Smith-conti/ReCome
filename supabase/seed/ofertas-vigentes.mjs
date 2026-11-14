@@ -137,7 +137,7 @@ for (const [businessIndex, item] of businesses.entries()) {
       title: offer.title,
       description: offer.description,
       original_price: offer.original,
-      discounted_price: offer.price,
+      discounted_price: Math.max(offer.price, Math.ceil(offer.original * 50) / 100),
       initial_quantity: offer.stock,
       available_quantity: offer.stock,
       pickup_start: window.pickup_start,

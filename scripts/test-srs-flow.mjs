@@ -122,5 +122,13 @@ try {
   await rpc(client,"cancel_reservation",[newRate.id]);
   for(let i=0;i<5;i++) await reserve(limitOffer);
   await fail(client,"create_reservation",[limitOffer,1],"Sexta reserva activa rechazada en servidor");
+  await db.exec(await readFile(new URL("20261114130000_srs_offer_discount.sql", root), "utf8"));
+  let discountRejected = false;
+  try { await offer("Descuento inválido"); } catch { discountRejected = true; }
+  ok(discountRejected, "PostgreSQL rechaza crear descuentos mayores que 50 %");
+  await db.query("update public.offers set discounted_price=10 where id=$1", [heldOffer]);
+  ok((await row("select discounted_price from public.offers where id=$1",[heldOffer])).discounted_price==='10.00' || Number((await row("select discounted_price from public.offers where id=$1",[heldOffer])).discounted_price)===10, "PostgreSQL permite exactamente 50 %");
+  await db.query("update public.offers set available_quantity=available_quantity where id=$1",[limitOffer]);
+  ok(await stock(limitOffer)===15, "Regla nueva conserva stock e historial de ofertas anteriores");
   console.log(`${checks} comprobaciones PostgreSQL correctas.`);
 } finally { await db.close(); }

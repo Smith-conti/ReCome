@@ -235,7 +235,7 @@ export function OfferForm({
         <div>
           <h2 className="text-lg">Precios y stock</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            El precio con descuento debe ser menor al precio original. El stock
+            El descuento debe ser mayor que 0 y como máximo del 50 %. El stock
             se ajusta después desde el panel de la oferta.
           </p>
         </div>

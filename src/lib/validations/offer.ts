@@ -80,11 +80,11 @@ export const offerSchema = z
     storageInstructions: optionalText(500, "Las instrucciones de conservación"),
   })
   .superRefine((data, ctx) => {
-    if (data.discountedPrice >= data.originalPrice) {
+    if (data.discountedPrice >= data.originalPrice || Math.round(data.discountedPrice * 100) * 2 < Math.round(data.originalPrice * 100)) {
       ctx.addIssue({
         code: "custom",
         path: ["discountedPrice"],
-        message: "El precio con descuento debe ser menor al precio original.",
+        message: "El precio ReCome debe ser menor al original, con un descuento máximo del 50 %.",
       });
     }
 

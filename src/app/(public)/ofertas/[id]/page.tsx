@@ -13,6 +13,7 @@ import {
   ShoppingBag,
   Store,
 } from "lucide-react";
+import { OfferDeadline } from "@/components/offers/offer-deadline";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -242,6 +243,7 @@ async function OfferDetailContent({ params }: PageProps) {
                     <dt className="font-medium">Consumir antes de</dt>
                     <dd className="text-muted-foreground">
                       {formatDateTime(offer.expirationAt)}
+                      <OfferDeadline expiresAt={offer.expirationAt} />
                     </dd>
                   </div>
                 </div>

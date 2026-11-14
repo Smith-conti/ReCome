@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { Suspense } from "react";
+import { OfferDeadline } from "./offer-deadline";
 import { Clock3, MapPin, ShoppingBag, Store } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatPrice, formatTimeRange } from "@/lib/format";
@@ -87,6 +89,7 @@ export function OfferCard({
         </div>
 
         <div className="mt-auto space-y-2">
+          <Suspense fallback={null}><OfferDeadline expiresAt={offer.expirationAt} /></Suspense>
           <p className="flex flex-wrap items-baseline gap-x-2">
             <span className="text-xl font-semibold text-foreground">
               {formatPrice(offer.discountedPrice)}

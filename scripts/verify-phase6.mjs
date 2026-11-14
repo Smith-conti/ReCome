@@ -54,7 +54,7 @@ async function offer(owner, category, label) {
   await value(owner.from("offers").insert({
     id, business_id: businessId, category_id: category,
     title: `Verificación ${label} ${run}`, description: "Datos temporales de verificación funcional.",
-    original_price: 20, discounted_price: 8, initial_quantity: 10,
+    original_price: 16, discounted_price: 8, initial_quantity: 10,
     available_quantity: 10, status: "DRAFT",
     pickup_start: new Date(Date.now() - 300000).toISOString(),
     pickup_end: new Date(Date.now() + 7200000).toISOString(),
@@ -89,6 +89,7 @@ try {
   ok((await value(service.from("businesses").select("approval_status").eq("id", businessId).single())).approval_status === "APPROVED", "Aprobación administrativa real");
 
   const id = await offer(owner.client, category, "reservas");
+  ok(Boolean((await owner.client.from("offers").update({discounted_price:7.99}).eq("id",id)).error), "Base de datos rechaza descuentos mayores que 50 %");
   ok((await value(anonymous.from("offers").select("id").eq("id", id))).length === 1, "Oferta publicada visible en catálogo público");
   const first = await reserve(customer.client, id, 2);
   ok(first.status === "PENDING_PAYMENT" && first.quantity === 2 && Number(first.total_price) === 16, "Reserva con precio y total calculados en servidor");

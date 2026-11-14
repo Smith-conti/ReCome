@@ -1,3 +1,5 @@
+> **Catálogo SRS:** filtros combinables por tipo de negocio, zona, precio y horario, días restantes y descuento máximo de 50 %. Ver [segunda entrega](docs/entrega-srs-2-catalogo.md).
+
 > **Primera entrega SRS:** flujo de reserva, pago simulado, confirmación y QR incorporado. Consulta [alcance, migraciones y pruebas](docs/entrega-srs-1.md). Las descripciones del alcance original que aparecen más abajo son históricas.
 
 # ReCome

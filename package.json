@@ -11,7 +11,8 @@
     "seed:datos": "node supabase/seed/datos-prueba.mjs",
     "seed:ofertas": "node supabase/seed/ofertas-vigentes.mjs",
     "test:srs": "node scripts/test-srs-flow.mjs",
-    "verify:remote": "node scripts/verify-phase6.mjs --run-remote"
+    "verify:remote": "node scripts/verify-phase6.mjs --run-remote",
+    "test:catalog": "node scripts/test-catalog.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

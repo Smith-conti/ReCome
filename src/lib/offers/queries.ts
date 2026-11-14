@@ -257,6 +257,13 @@ export type PublicOfferFilters = {
   search?: string;
   categorySlug?: string;
   limit?: number;
+  offset?: number;
+  businessType?: BusinessType;
+  district?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  pickupFrom?: string;
+  pickupTo?: string;
 };
 
 export async function listPublicOffers(
@@ -265,12 +272,23 @@ export async function listPublicOffers(
   const supabase = await createClient();
   let request = supabase
     .from("offers")
-    .select(PUBLIC_OFFER_COLUMNS)
+    .select(PUBLIC_OFFER_COLUMNS.replace("businesses (", "businesses!inner ("))
+    .eq("businesses.approval_status", "APPROVED")
+    .gt("available_quantity", 0)
+    .or("expiration_at.is.null,expiration_at.gt." + new Date().toISOString())
     .eq("status", "ACTIVE")
     .is("archived_at", null)
     .gt("pickup_end", new Date().toISOString())
     .order("pickup_end", { ascending: true })
-    .limit(filters.limit ?? 60);
+    .order("id", { ascending: true })
+    .range(filters.offset ?? 0, (filters.offset ?? 0) + (filters.limit ?? 60) - 1);
+
+  if (filters.businessType) request = request.eq("businesses.type", filters.businessType);
+  if (filters.district) request = request.eq("businesses.district", filters.district);
+  if (filters.minPrice !== undefined) request = request.gte("discounted_price", filters.minPrice);
+  if (filters.maxPrice !== undefined) request = request.lte("discounted_price", filters.maxPrice);
+  if (filters.pickupFrom) request = request.gt("pickup_end", filters.pickupFrom);
+  if (filters.pickupTo) request = request.lt("pickup_start", filters.pickupTo);
 
   if (filters.categorySlug) {
     const categoryId = await getCategoryIdBySlug(filters.categorySlug);
@@ -283,7 +301,8 @@ export async function listPublicOffers(
     request = request.ilike("title", `%${search}%`);
   }
 
-  const { data } = await request;
+  const { data, error } = await request;
+  if (error) throw new Error("No pudimos consultar las ofertas. Inténtalo de nuevo.");
   return ((data ?? []) as unknown as RawOffer[]).map(mapOffer);
 }
 
@@ -598,4 +617,11 @@ export async function countOffersForAdmin(): Promise<
   }
 
   return counts;
+}
+
+export async function listCatalogDistricts(): Promise<string[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("businesses").select("district").eq("approval_status", "APPROVED").not("district", "is", null).order("district");
+  if (error) throw new Error("No pudimos consultar las zonas.");
+  return [...new Set((data ?? []).map(row => row.district as string).filter(Boolean))];
 }
