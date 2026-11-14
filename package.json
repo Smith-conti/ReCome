@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed:demo": "node supabase/seed/demo.mjs",
+    "seed:datos": "node supabase/seed/datos-prueba.mjs",
+    "seed:ofertas": "node supabase/seed/ofertas-vigentes.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

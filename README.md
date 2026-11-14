@@ -116,8 +116,15 @@ de aplicación está en [`docs/base-de-datos.md`](docs/base-de-datos.md).
 > proyecto. `supabase/consolidado.sql` reúne las 11 migraciones para recrear el
 > esquema desde cero.
 
-Los datos de demostración se cargan con `node supabase/seed/datos-prueba.mjs`
-y sus ofertas se renuevan con `node supabase/seed/ofertas-vigentes.mjs`
+El seed completo deja el sistema poblado con comercios, ofertas, cuentas de
+cliente, un administrador y reservas con historial:
+
+```bash
+node supabase/seed/demo.mjs
+```
+
+Para cargar solo el catálogo usa `node supabase/seed/datos-prueba.mjs`, y para
+renovar las fechas de recojo `node supabase/seed/ofertas-vigentes.mjs`
 (ver [`docs/base-de-datos.md`](docs/base-de-datos.md)).
 
 ## Autenticación y roles

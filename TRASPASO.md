@@ -90,8 +90,33 @@ Proyecto de Supabase ya provisionado: `qhjtagnlwefzmklgtfvp.supabase.co`
 
 ### Datos de prueba
 
-`supabase/seed/datos-prueba.mjs` crea 7 comercios de Cusco con su cuenta
-`BUSINESS` y 19 ofertas activas. Es idempotente.
+El seed completo deja el sistema poblado para probar los tres roles:
+
+```bash
+node supabase/seed/demo.mjs
+# o, con npm:
+npm run seed:demo
+```
+
+Crea los 7 comercios con sus ofertas, 6 cuentas `CLIENT`, la cuenta
+`admin@recome.test` y unas 20 reservas repartidas entre todos los estados
+(`PENDING`, `CONFIRMED`, `DELIVERED`, `CANCELLED` y `EXPIRED`) con su historial
+en fechas pasadas. Usa las RPC reales, así que respeta el stock, el límite de 5
+reservas activas y las reglas de cada estado. Es idempotente: omite los clientes
+que ya tienen reservas.
+
+```bash
+node supabase/seed/demo.mjs --reset          # borra y recrea las reservas demo
+node supabase/seed/demo.mjs --skip-catalogo  # no vuelve a sembrar comercios
+```
+
+Las cuentas demo son las de la sección 9. El historial reutiliza las ofertas
+vigentes para que siga visible aunque no esté aplicada la política de la Fase 6;
+por eso una reserva entregada o vencida puede mostrar una fecha de recojo
+posterior.
+
+`supabase/seed/datos-prueba.mjs` crea solo 7 comercios de Cusco con su cuenta
+`BUSINESS` y 19 ofertas activas. También es idempotente.
 
 ```bash
 node supabase/seed/datos-prueba.mjs
@@ -105,10 +130,12 @@ node supabase/seed/ofertas-vigentes.mjs                      # próximos 3 días
 node supabase/seed/ofertas-vigentes.mjs 2026-11-15 2026-11-16 2026-11-17
 ```
 
-El catálogo de comercios y ofertas vive en `supabase/seed/comercios.mjs`, y la
-lectura de credenciales y el cliente REST en `supabase/seed/cliente.mjs`.
+El catálogo de comercios y ofertas vive en `supabase/seed/comercios.mjs`, los
+clientes demo en `supabase/seed/clientes.mjs`, y la lectura de credenciales y el
+cliente REST en `supabase/seed/cliente.mjs`.
 
-Para borrar todo lo anterior:
+Para borrar todo lo anterior (incluidas las cuentas `@recome.test` y las
+reservas demo):
 
 ```sql
 -- ejecutar en el SQL Editor de Supabase
@@ -459,8 +486,14 @@ mutación vuelve a comprobar sesión y propiedad.
 
 Contraseña única: **`ReCome2026!`** (también listadas en `Cuentas.txt`).
 
-| Correo | Rol | Comercio |
+| Correo | Rol | Comercio / notas |
 |---|---|---|
+| `ana.torres@recome.test` | `CLIENT` | Demo (`demo.mjs`): 4 reservas |
+| `jorge.mamani@recome.test` | `CLIENT` | Demo (`demo.mjs`): 4 reservas |
+| `lucia.condori@recome.test` | `CLIENT` | Demo (`demo.mjs`): 3 reservas |
+| `diego.choque@recome.test` | `CLIENT` | Demo (`demo.mjs`): 3 reservas |
+| `maria.huaman@recome.test` | `CLIENT` | Demo (`demo.mjs`): 3 reservas |
+| `carlos.puma@recome.test` | `CLIENT` | Demo (`demo.mjs`): 3 reservas |
 | `eltrigal@recome.test` | `BUSINESS` | Panadería El Trigal (Wanchaq) |
 | `donachela@recome.test` | `BUSINESS` | Pastelería Doña Chela |
 | `qorikancha@recome.test` | `BUSINESS` | Café Qorikancha |
@@ -471,8 +504,8 @@ Contraseña única: **`ReCome2026!`** (también listadas en `Cuentas.txt`).
 | `admin@recome.test` | `ADMIN` | — |
 
 Los correos `@recome.test` no reciben mensajes reales: sirven para iniciar
-sesión, no para probar la confirmación por correo. No hay cuentas `CLIENT`
-permanentes (se crean y se borran durante las pruebas).
+sesión, no para probar la confirmación por correo. Las cuentas `CLIENT` las crea
+`supabase/seed/demo.mjs`; en un proyecto sin seed no existen hasta ejecutarlo.
 
 `ADMIN` **nunca** se pide en el registro. Se asigna por SQL:
 
@@ -845,8 +878,11 @@ orden (4 → 5 → 6 → 7).
 | `Date.now() while prerendering` en `/admin/negocios/[id]` | `generateMetadata` leía Supabase antes de marcar la ruta como dinámica | `await connection()` al inicio de `generateMetadata` |
 | El navegador headless no muestra el contenido de `<Suspense>` | `requestAnimationFrame` se pausa si la ventana no está visible | No es un fallo de la app: el HTML servido sí trae el contenido; validar con `tabs.focus` o por HTTP |
 
-Estado de Git: las Fases 1–6 están commiteadas; el último commit es
-«Fase 6 - Reservas y recojos». Incluye `src/lib/reservations`,
+Estado de Git: las Fases 1–6 y el seed demo están commiteados; el último commit
+es «Seed - Demo completa con clientes y reservas». Incluye `demo.mjs`,
+`clientes.mjs`, el inicio de sesión en `cliente.mjs`, la documentación del seed,
+`Cuentas.txt` y los scripts `seed:*` de `package.json`. El commit anterior,
+«Fase 6 - Reservas y recojos», trae `src/lib/reservations`,
 `src/components/reservations`, las rutas de reservas de los tres roles, el
 cron, `vercel.json`, la migración `20261114090000_fase6_offer_history.sql`,
 `supabase/fase6.sql` y los cambios de navegación, dashboards y ficha pública.
@@ -879,8 +915,9 @@ npm run build               # build de producción (no junto con dev)
 npm run lint                # ESLint
 npx tsc --noEmit            # solo tipos
 
-node supabase/seed/datos-prueba.mjs          # cargar datos de prueba
-node supabase/seed/ofertas-vigentes.mjs      # renovar fechas de las ofertas
+node supabase/seed/demo.mjs                # demo completa: cuentas y reservas
+node supabase/seed/datos-prueba.mjs        # solo comercios y ofertas
+node supabase/seed/ofertas-vigentes.mjs    # renovar fechas de las ofertas
 # limpiar: ejecutar supabase/seed/limpiar-datos-prueba.sql en el SQL Editor
 
 git status --short          # ver cambios pendientes
@@ -917,9 +954,10 @@ Si retomas el proyecto, en este orden:
    para habilitar la lectura del historial de ofertas inactivas.
 2. Validar la Fase 6 con el usuario: reservar una oferta desde una cuenta
    `CLIENT`, confirmarla y entregarla con el comercio, y revisar el historial.
-3. El catálogo ya tiene ofertas activas repartidas entre el 15, 16 y 17 de
-   noviembre (`supabase/seed/ofertas-vigentes.mjs`). Si se vencen, volver a
-   ejecutar ese script.
+3. La demo ya está cargada: `node supabase/seed/demo.mjs` deja 6 clientes,
+   20 reservas y el historial de los últimos días. Si las ofertas se vencen,
+   ejecutar `node supabase/seed/ofertas-vigentes.mjs` y después
+   `node supabase/seed/demo.mjs --reset` para regenerar las reservas.
 4. Con la Fase 6 validada, empezar la Fase 7 (estadísticas, pruebas de
    concurrencia y preparación del despliegue). **No afirmar que está desplegado
    hasta desplegarlo de verdad.**

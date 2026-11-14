@@ -250,25 +250,48 @@ Pendiente de verificar dentro de las fases siguientes:
 
 | Archivo | Uso |
 |---|---|
+| `demo.mjs` | Seed completo: comercios, ofertas, 6 clientes, admin y reservas con historial |
+| `clientes.mjs` | Cuentas `CLIENT` de demostración y su plan de reservas |
 | `datos-prueba.mjs` | Crea 7 comercios de Cusco con su cuenta `BUSINESS` y 19 ofertas activas |
 | `ofertas-vigentes.mjs` | Renueva precios, stock y fechas de recojo del catálogo de prueba |
 | `comercios.mjs` | Catálogo compartido de comercios y ofertas de demostración |
-| `cliente.mjs` | Lectura de `.env.local` y cliente REST con la clave secreta |
+| `cliente.mjs` | Lectura de `.env.local`, cliente REST con la clave secreta e inicio de sesión |
 | `limpiar-datos-prueba.sql` | Borra todo lo anterior (comercios, ofertas, reservas y cuentas `@recome.test`) |
 
-Requisitos: `NEXT_PUBLIC_SUPABASE_URL` y `SUPABASE_SECRET_KEY` en `.env.local`.
+Requisitos: `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SECRET_KEY` y
+`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` en `.env.local` (la última solo hace falta
+para `demo.mjs`, que inicia sesión con las cuentas para ejecutar las RPC).
 
 ```bash
-node supabase/seed/datos-prueba.mjs
+# Demo completa: deja el sistema poblado para los tres roles.
+node supabase/seed/demo.mjs
 
-# Renovar la vigencia de las ofertas para probar el catálogo:
+# Opciones:
+node supabase/seed/demo.mjs --reset           # borra y recrea las reservas demo
+node supabase/seed/demo.mjs --skip-catalogo   # no vuelve a sembrar comercios
+
+# Solo catálogo y renovación de fechas:
+node supabase/seed/datos-prueba.mjs
 node supabase/seed/ofertas-vigentes.mjs
 node supabase/seed/ofertas-vigentes.mjs 2026-11-15 2026-11-16 2026-11-17
 ```
 
-El script es idempotente: las cuentas se buscan por correo y los comercios por
-`owner_id`, así que se puede volver a ejecutar sin duplicar filas. Las cuentas
-usan la contraseña `RECOME_SEED_PASSWORD` (por defecto `ReCome2026!`).
+`demo.mjs` crea las cuentas de `clientes.mjs` (6 clientes) y
+`admin@recome.test`, y genera unas 20 reservas en todos los estados usando
+`create_reservation`, `confirm_reservation`, `deliver_reservation`,
+`cancel_reservation` y `expire_reservations`. Respeta stock, límite de reservas
+activas y reglas de estado. Es idempotente: omite los clientes que ya tienen
+reservas. Después reparte `created_at` y los eventos en fechas pasadas con la
+clave secreta.
+
+> El historial reutiliza las ofertas vigentes para que sea visible sin la
+> política `offers_select_customer_reservations` de la Fase 6. Por eso una
+> reserva entregada o vencida puede mostrar una fecha de recojo futura.
+
+El seed de catálogo es idempotente: las cuentas se buscan por correo y los
+comercios por `owner_id`, así que se puede volver a ejecutar sin duplicar filas.
+Las cuentas usan la contraseña `RECOME_SEED_PASSWORD` (por defecto
+`ReCome2026!`).
 
 Comercios creados:
 

@@ -35,6 +35,8 @@ function loadEnv(file) {
 export const env = { ...loadEnv(resolve(root, ".env.local")), ...process.env };
 export const URL_BASE = env.NEXT_PUBLIC_SUPABASE_URL;
 export const SECRET = env.SUPABASE_SECRET_KEY;
+export const PUBLISHABLE_KEY =
+  env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 const headers = {
   apikey: SECRET,
@@ -79,3 +81,81 @@ export async function api(path, options = {}) {
 }
 
 export const encode = (value) => encodeURIComponent(value);
+
+/**
+ * Inicia sesión como un usuario de prueba y devuelve su access token.
+ * Se usa para ejecutar las RPC de reservas con la identidad real del usuario
+ * (las funciones leen `auth.uid()` y validan el rol).
+ */
+export async function signIn(email, password) {
+  if (!PUBLISHABLE_KEY) {
+    throw new Error(
+      "Falta NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY en .env.local.",
+    );
+  }
+
+  const response = await fetch(
+    `${URL_BASE}/auth/v1/token?grant_type=password`,
+    {
+      method: "POST",
+      headers: { apikey: PUBLISHABLE_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    },
+  );
+
+  const text = await response.text();
+  let body = null;
+  if (text) {
+    try {
+      body = JSON.parse(text);
+    } catch {
+      body = text;
+    }
+  }
+
+  if (!response.ok || !body?.access_token) {
+    const detail =
+      body?.error_description ?? body?.msg ?? body?.error ?? response.status;
+    throw new Error(`No se pudo iniciar sesión como ${email}: ${detail}`);
+  }
+
+  return body.access_token;
+}
+
+/** Ejecuta una RPC con el token de un usuario (respeta RLS y roles). */
+export async function rpcAs(name, args, token) {
+  if (!PUBLISHABLE_KEY) {
+    throw new Error(
+      "Falta NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY en .env.local.",
+    );
+  }
+
+  const response = await fetch(`${URL_BASE}/rest/v1/rpc/${name}`, {
+    method: "POST",
+    headers: {
+      apikey: PUBLISHABLE_KEY,
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(args ?? {}),
+  });
+
+  const text = await response.text();
+  let body = null;
+  if (text) {
+    try {
+      body = JSON.parse(text);
+    } catch {
+      body = text;
+    }
+  }
+
+  if (!response.ok) {
+    const detail =
+      body?.message ?? body?.error_description ?? body?.error ?? text;
+    throw new Error(`RPC ${name} → ${response.status}: ${detail}`);
+  }
+
+  return body;
+}
+

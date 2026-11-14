@@ -1,7 +1,9 @@
 -- ReCome · Limpieza de los datos de prueba
 --
 -- Borra los 7 comercios creados por supabase/seed/datos-prueba.mjs, sus
--- ofertas, sus reservas y las cuentas de Auth asociadas (@recome.test).
+-- ofertas y reservas, y todas las cuentas de Auth asociadas (@recome.test),
+-- incluidas las de cliente y el administrador creados por demo.mjs.
+-- Las ofertas de reservas históricas no se borran si no son de estos comercios.
 --
 -- Ejecutar en el SQL Editor de Supabase. Todo va en una transacción: si algo
 -- falla, no se borra nada.

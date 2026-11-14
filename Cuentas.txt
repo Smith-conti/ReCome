@@ -1,3 +1,12 @@
+Clientes (demo.mjs)
+ana.torres@recome.test
+jorge.mamani@recome.test
+lucia.condori@recome.test
+diego.choque@recome.test
+maria.huaman@recome.test
+carlos.puma@recome.test
+
+Comercios
 eltrigal@recome.test
 donachela@recome.test
 qorikancha@recome.test
@@ -5,5 +14,8 @@ salkantay@recome.test
 tupananchis@recome.test
 losandes@recome.test
 manzanapata@recome.test
+
+Administrador
+admin@recome.test
 
 Contraseña: ReCome2026!
