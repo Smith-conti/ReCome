@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { ArrowRight, ShoppingBag, Store } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
@@ -49,6 +50,9 @@ export function FeaturedOffers() {
 }
 
 async function FeaturedOffersList() {
+  // La lista depende de la hora actual (ofertas con recojo vigente), así que
+  // se resuelve en cada petición y no durante el prerender.
+  await connection();
   const offers = await listFeaturedOffers(3);
 
   if (offers.length === 0) {

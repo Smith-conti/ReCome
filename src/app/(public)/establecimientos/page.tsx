@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { MapPin, Search, Store, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +38,9 @@ export default function BusinessesPage({ searchParams }: PageProps) {
 }
 
 async function BusinessesContent({ searchParams }: PageProps) {
+  // El directorio cuenta ofertas activas según la hora actual.
+  await connection();
+
   const params = await searchParams;
   const search = firstParam(params.q).slice(0, 80);
   const type = firstParam(params.tipo);

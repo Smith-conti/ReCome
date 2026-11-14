@@ -13,6 +13,7 @@ import { buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -101,14 +102,16 @@ export function SiteHeaderActions({ user }: { user: HeaderUser | null }) {
               <span className="sr-only">Abrir menú de cuenta</span>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-60">
-              <DropdownMenuLabel>
-                <span className="block truncate text-sm font-medium text-foreground">
-                  {user.fullName}
-                </span>
-                <span className="block text-xs text-muted-foreground">
-                  {ROLE_LABEL[user.role]}
-                </span>
-              </DropdownMenuLabel>
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>
+                  <span className="block truncate text-sm font-medium text-foreground">
+                    {user.fullName}
+                  </span>
+                  <span className="block text-xs text-muted-foreground">
+                    {ROLE_LABEL[user.role]}
+                  </span>
+                </DropdownMenuLabel>
+              </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuItem render={<Link href={user.dashboard} />}>
                 <LayoutDashboard aria-hidden="true" />
@@ -124,6 +127,7 @@ export function SiteHeaderActions({ user }: { user: HeaderUser | null }) {
               <form action={logoutAction}>
                 <DropdownMenuItem
                   variant="destructive"
+                  nativeButton
                   render={<button type="submit" className="w-full" />}
                 >
                   <LogOut aria-hidden="true" />

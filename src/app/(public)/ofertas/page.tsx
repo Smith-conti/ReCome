@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { Search, SlidersHorizontal, ShoppingBag, Store, X } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -43,6 +44,10 @@ export default function OffersPage({ searchParams }: PageProps) {
 }
 
 async function OffersContent({ searchParams }: PageProps) {
+  // La consulta filtra por hora de recojo vigente: se resuelve en cada
+  // petición para no usar `new Date()` durante el prerender.
+  await connection();
+
   const params = await searchParams;
   const search = firstParam(params.q).slice(0, 80);
   const categorySlug = firstParam(params.categoria);
