@@ -6,7 +6,7 @@
 > romper y qué trampas ya se resolvieron.
 >
 > Última actualización: **14 de noviembre de 2026** · Rama de trabajo: `master`
-> (commit `79358d1` «Fase 4 - Completado» + cambios de la Fase 5 sin commitear).
+> (Fases 1–6 commiteadas; ver estado de Git en la sección 15).
 
 ---
 
@@ -32,14 +32,14 @@ La especificación completa, con las 7 fases y las decisiones cerradas, está en
 | 2 | Base de datos, RLS y funciones transaccionales | ✅ Completada y **aplicada al proyecto real** |
 | 3 | Autenticación, sesiones, roles y protección de rutas | ✅ Completada y verificada en navegador |
 | 4 | Comercios y administración (registro, perfil, aprobación/suspensión) | ✅ Completada y validada por el usuario |
-| 5 | Ofertas (CRUD, imágenes, stock, catálogo, filtros) | ✅ Código completo · ⏳ falta probar en navegador |
-| 6 | Reservas y recojos (crear, cancelar, vencer, entregar, historial) | ⏳ Pendiente (RPC ya listas en la base) |
+| 5 | Ofertas (CRUD, imágenes, stock, catálogo, filtros) | ✅ Completada y verificada en navegador |
+| 6 | Reservas y recojos (crear, cancelar, vencer, entregar, historial) | ✅ Código completo y verificado · ⏳ falta aplicar `fase6.sql` |
 | 7 | Estadísticas, pruebas y despliegue | ⏳ Pendiente |
 
 Hay 7 tablas, 6 categorías y 3 buckets creados en el proyecto real de Supabase,
-con 7 comercios y 19 ofertas de prueba. Las migraciones de las Fases 2 y 4 están
-aplicadas. La Fase 5 no requiere cambios de esquema: reutiliza las RPC y las
-políticas existentes.
+con 7 comercios y 19 ofertas de prueba. Las migraciones de las Fases 2, 4 y 6
+están aplicadas o listas para aplicar. La Fase 5 no requirió cambios de esquema:
+reutiliza las RPC y las políticas existentes.
 
 **Nada está desplegado.** No afirmar lo contrario.
 
@@ -220,15 +220,17 @@ src/
 │   ├── (public)/              landing, /ofertas, /establecimientos
 │   ├── (auth)/                login, registro, recuperar, restablecer
 │   ├── auth/callback/         canje del código de Supabase
-│   ├── cliente/               layout con guard + dashboard + perfil
-│   ├── negocio/               layout con guard + dashboard + perfil
-│   └── admin/                 layout con guard + dashboard + negocios
+│   ├── cliente/               layout con guard + dashboard + reservas + perfil
+│   ├── negocio/               layout con guard + dashboard, ofertas, reservas y entregas
+│   ├── admin/                 layout con guard + dashboard, negocios, ofertas y reservas
+│   └── api/cron/              vencimiento automático de reservas
 ├── components/
 │   ├── ui/                    shadcn (Base UI)
 │   ├── layout/                cabecera con menú de cuenta, pie, logo
 │   ├── auth/                  formularios y campos reutilizables
 │   ├── business/              formulario de establecimiento con horarios
 │   ├── offers/                formulario, imagen, tarjeta y acciones de oferta
+│   ├── reservations/          formulario, acciones y validación de códigos
 │   ├── admin/                 panel de revisión (aprobar/rechazar/suspender)
 │   ├── dashboard/             shell, navegación lateral y esqueletos
 │   └── public/                bloques de la landing y estados vacíos
@@ -249,6 +251,11 @@ src/
 │   │   ├── queries.ts         catálogo, directorio, panel y admin
 │   │   ├── actions.ts         crear/editar, estado, stock y archivar
 │   │   └── action-state.ts    estado de los formularios
+│   ├── reservations/
+│   │   ├── types.ts           estados, etiquetas y modelos de reserva
+│   │   ├── queries.ts         reservas por rol, cola de entregas e historial
+│   │   ├── actions.ts         crear, cancelar, confirmar y entregar
+│   │   └── action-state.ts    estado de los formularios
 │   ├── supabase/
 │   │   ├── client.ts          cliente de navegador
 │   │   ├── server.ts          cliente de servidor con cookies
@@ -258,6 +265,7 @@ src/
 │   │   ├── auth.ts            esquemas Zod de acceso y perfil
 │   │   ├── business.ts        esquema Zod del establecimiento
 │   │   ├── offer.ts           esquema Zod de la oferta y sus fechas
+│   │   ├── reservation.ts     esquemas Zod de reserva y código de recojo
 │   │   └── errors.ts          fieldErrors / readForm compartidos
 │   ├── format.ts              fecha, hora y moneda en America/Lima
 │   └── utils.ts               cn()
@@ -265,9 +273,10 @@ src/
 
 supabase/
 ├── config.toml
-├── migrations/                10 migraciones en orden
-├── consolidado.sql            las 10 en un solo script transaccional
-├── fase4.sql                  las 2 nuevas, para el proyecto ya existente
+├── migrations/                11 migraciones en orden
+├── consolidado.sql            las 11 en un solo script transaccional
+├── fase4.sql                  las 2 de la Fase 4, para el proyecto ya existente
+├── fase6.sql                  la de la Fase 6, para el proyecto ya existente
 └── seed/                      datos de prueba y limpieza
 
 docs/
@@ -403,7 +412,9 @@ Lectura pública; 5 MB por archivo; solo `image/jpeg`, `image/png` o `image/webp
 | `/login`, `/registro`, `/recuperar`, `/restablecer` | Fase 3 |
 | `/auth/callback` | Canjea el código de Supabase y redirige por rol |
 | `/cliente` | Redirige a `/cliente/dashboard` |
-| `/cliente/dashboard` | Panel con datos reales del perfil |
+| `/cliente/dashboard` | Panel con datos reales del perfil, contadores y próximas reservas |
+| `/cliente/reservas` | Historial con filtros por estado, contadores y códigos de recojo activos |
+| `/cliente/reservas/[id]` | Detalle, código, historial de eventos y cancelación con aviso visible |
 | `/cliente/perfil` | Editar nombre y teléfono (correo y rol no editables) |
 | `/negocio` | Redirige a `/negocio/dashboard` |
 | `/negocio/dashboard` | Panel con el estado real del establecimiento y acceso a la edición |
@@ -411,18 +422,21 @@ Lectura pública; 5 MB por archivo; solo `image/jpeg`, `image/png` o `image/webp
 | `/negocio/ofertas` | Listado por estado con búsqueda, contadores y acciones rápidas |
 | `/negocio/ofertas/nueva` | Formulario de creación; guarda como borrador |
 | `/negocio/ofertas/[id]/editar` | Edición, stock, publicación/pausa y archivado |
+| `/negocio/reservas` | Reservas recibidas: confirmar, cancelar y datos de contacto |
+| `/negocio/entregas` | Validación del código de recojo y cola de recojos pendientes |
 | `/admin` | Redirige a `/admin/dashboard` |
 | `/admin/dashboard` | Contadores reales: pendientes, aprobados, clientes, ofertas activas |
 | `/admin/negocios` | Listado con filtro por estado, contadores y enlaces al detalle |
 | `/admin/negocios/[id]` | Datos del dueño, ubicación, horarios, ofertas y acciones de revisión |
 | `/admin/ofertas` | Listado de solo lectura con filtros por estado y título |
+| `/admin/reservas` | Supervisión de solo lectura de todas las reservas, sin códigos |
+| `/api/cron/expire-reservations` | Cron protegido con `CRON_SECRET` que ejecuta `expire_reservations` |
 
 ### Pendientes (fuente: sección 4 de `base-recome.md`)
 
 | Fase | Rutas |
 |---|---|
 | 4 | `/admin/usuarios` (diferida: el esquema no tiene estado de usuario) |
-| 6 | `/cliente/reservas`, `/negocio/reservas`, `/negocio/entregas`, `/admin/reservas` |
 | 7 | `/admin/reportes` |
 
 ### Reglas de acceso
@@ -707,17 +721,74 @@ src/app/admin/dashboard/page.tsx                     acceso a /admin/ofertas
 
 ---
 
-## 13. Fases 6 y 7 (alcance pendiente)
+## 13. Fase 6 — Reservas y recojos ✅ (código)
 
-### Fase 6 — Reservas y recojos
+### 13.1 Qué se implementó
 
-Crear reservas (`create_reservation`), validar stock, mostrar el código de
-recojo, consultar reservas por rol, cancelar, vencer (endpoint de Vercel Cron
-protegido con `CRON_SECRET` que llama a `expire_reservations`), confirmar
-entrega (`deliver_reservation`) e historial de eventos. La lógica de base ya
-está probada; falta toda la UI y el endpoint.
+- Formulario de reserva en `/ofertas/[id]` con CTA de acceso para invitados,
+  aviso para roles que no son `CLIENT` y selector de cantidad limitado por
+  stock (máximo 10 por reserva).
+- `/cliente/reservas` con pestañas por estado, contadores reales y códigos de
+  recojo en las reservas activas.
+- `/cliente/reservas/[id]` con detalle, código, historial de eventos, enlace a
+  Google Maps, cancelación y avisos `creada`/`cancelada`.
+- `/negocio/reservas` para confirmar, cancelar y ver los datos de contacto del
+  cliente. El código de recojo **no** se muestra en esta pantalla.
+- `/negocio/entregas` con el formulario de validación del código y la cola de
+  reservas pendientes/confirmadas.
+- `/admin/reservas` de solo lectura, sin códigos.
+- `/api/cron/expire-reservations` + `vercel.json` (cron cada 15 minutos).
+- Navegación por rol y dashboards de cliente/comercio con datos reales.
 
-### Fase 7 — Estadísticas y pruebas
+### 13.2 Decisiones técnicas
+
+- La entrega se resuelve por código: la acción busca la reserva por
+  `pickup_code` bajo RLS y luego llama a `deliver_reservation(id, code)`. Así el
+  comercio no necesita conocer el id de la reserva.
+- Solo se añadió una política nueva, `offers_select_customer_reservations`, para
+  que el cliente lea sus ofertas ya inactivas. No se añadió una política de
+  `businesses` para evitar recursión.
+- `expire_reservations` se ejecuta con `SUPABASE_SECRET_KEY`; el endpoint exige
+  `Authorization: Bearer <CRON_SECRET>`.
+- El aviso de cancelación usa redirección a `?cancelada=1` porque la
+  revalidación borraba el estado de `useActionState`.
+- `/ofertas/[id]` llama `await connection()` antes de `new Date()` para evitar
+  el error de prerender al revalidar la ruta.
+
+### 13.3 Archivos creados o modificados
+
+- `src/lib/reservations/{types,queries,actions,action-state}.ts`
+- `src/lib/validations/reservation.ts`
+- `src/components/reservations/{reservation-form,reservation-actions,delivery-code-form}.tsx`
+- `src/app/cliente/reservas/{page.tsx,[id]/page.tsx}`
+- `src/app/negocio/{reservas,entregas}/page.tsx`
+- `src/app/admin/reservas/page.tsx`
+- `src/app/api/cron/expire-reservations/route.ts`, `vercel.json`
+- `supabase/migrations/20261114090000_fase6_offer_history.sql`,
+  `supabase/fase6.sql`, `supabase/consolidado.sql`
+- Navegación, dashboards de cliente/comercio y ficha pública de oferta.
+
+### 13.4 Verificación hecha
+
+- `npm run lint` limpio y `npx tsc --noEmit` sin errores.
+- `npm run build` correcto: 33 rutas, cron dinámico, sin avisos nuevos.
+- 24/24 pruebas REST: crear, stock, confirmar, código incorrecto/correcto,
+  historial, cancelar, límite de 5 activas, aislamiento entre comercios,
+  cron 200/401, vencimiento y devolución de stock.
+- 27/27 comprobaciones en Chrome real vía CDP: reservar desde la ficha,
+  confirmar, entregar con el código, código inexistente, cancelar y admin;
+  consola limpia y sin respuestas HTTP de error.
+- Datos de prueba eliminados y cuenta `cliente.prueba@recome.test` borrada.
+
+### 13.5 Pendiente para cerrar la fase
+
+1. Aplicar `supabase/fase6.sql` en el proyecto de Supabase para habilitar la
+   lectura del historial de ofertas inactivas.
+2. Validación del usuario antes de empezar la Fase 7.
+
+---
+
+### Fase 7 — Estadísticas y pruebas (pendiente)
 
 Paneles con datos reales, indicadores por comercio y globales, pruebas de roles,
 de RLS, de concurrencia (script SQL), responsive, build de producción y
@@ -774,10 +845,12 @@ orden (4 → 5 → 6 → 7).
 | `Date.now() while prerendering` en `/admin/negocios/[id]` | `generateMetadata` leía Supabase antes de marcar la ruta como dinámica | `await connection()` al inicio de `generateMetadata` |
 | El navegador headless no muestra el contenido de `<Suspense>` | `requestAnimationFrame` se pausa si la ventana no está visible | No es un fallo de la app: el HTML servido sí trae el contenido; validar con `tabs.focus` o por HTTP |
 
-Estado de Git: la Fase 4 está commiteada (`79358d1`). Quedan sin commitear los
-cambios de la Fase 5 (`src/lib/offers`, `src/components/offers`,
-`src/lib/validations/offer.ts`, las páginas públicas y privadas de ofertas,
-`docs/rutas.md`, `README.md` y este archivo). `.env.local` no viaja con Git.
+Estado de Git: las Fases 1–6 están commiteadas; el último commit es
+«Fase 6 - Reservas y recojos». Incluye `src/lib/reservations`,
+`src/components/reservations`, las rutas de reservas de los tres roles, el
+cron, `vercel.json`, la migración `20261114090000_fase6_offer_history.sql`,
+`supabase/fase6.sql` y los cambios de navegación, dashboards y ficha pública.
+`.env.local` no viaja con Git.
 
 ---
 
@@ -833,20 +906,20 @@ Si retomas el proyecto, en este orden:
 8. `src/app/admin/negocios/[id]/page.tsx` — detalle y acciones de revisión.
 9. `src/lib/offers/actions.ts` — Server Actions de ofertas.
 10. `src/app/negocio/ofertas/[id]/editar/page.tsx` — edición, stock y estado.
+11. `src/lib/reservations/actions.ts` — crear, cancelar, confirmar y entregar.
+12. `src/app/negocio/entregas/page.tsx` — validación del código de recojo.
 
 ---
 
 ## 19. Próximo paso concreto
 
-1. Probar la Fase 5 en navegador con una cuenta `BUSINESS` real: crear un
-   borrador, subir una imagen, publicarlo, verlo en `/ofertas`, abrir la ficha,
-   pausarlo, ajustar el stock y archivarlo.
-2. Probar `/admin/ofertas` con la cuenta `ADMIN` y confirmar que no aparecen
-   acciones que el esquema no registra.
-3. El catálogo ya tiene 20 ofertas activas repartidas entre el 15, 16 y 17 de
+1. Aplicar `supabase/fase6.sql` en Supabase (SQL Editor → New query → Run)
+   para habilitar la lectura del historial de ofertas inactivas.
+2. Validar la Fase 6 con el usuario: reservar una oferta desde una cuenta
+   `CLIENT`, confirmarla y entregarla con el comercio, y revisar el historial.
+3. El catálogo ya tiene ofertas activas repartidas entre el 15, 16 y 17 de
    noviembre (`supabase/seed/ofertas-vigentes.mjs`). Si se vencen, volver a
    ejecutar ese script.
-4. Revisar la consola del navegador y el log del servidor; después commitear la
-   Fase 5.
-5. Pedir validación de la Fase 5 antes de empezar la Fase 6 (reservas y
-   recojos). Las RPC de reservas ya existen en la base.
+4. Con la Fase 6 validada, empezar la Fase 7 (estadísticas, pruebas de
+   concurrencia y preparación del despliegue). **No afirmar que está desplegado
+   hasta desplegarlo de verdad.**

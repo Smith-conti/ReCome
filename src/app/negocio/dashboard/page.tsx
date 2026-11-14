@@ -1,7 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { CheckCircle2, Clock3, MapPin, Plus, ShoppingBag, Store, XCircle } from "lucide-react";
+import {
+  CalendarCheck,
+  CheckCircle2,
+  Clock3,
+  KeyRound,
+  MapPin,
+  Plus,
+  ShoppingBag,
+  Store,
+  XCircle,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -15,12 +25,14 @@ import { createClient } from "@/lib/supabase/server";
 import { requireSessionProfile } from "@/lib/auth/session";
 import { DashboardBodySkeleton } from "@/components/dashboard/dashboard-skeleton";
 import { countOwnOffers } from "@/lib/offers/queries";
+import { countReservationsForBusiness } from "@/lib/reservations/queries";
 
 export const metadata: Metadata = {
   title: "Panel del comercio",
 };
 
 type BusinessRow = {
+  id: string;
   name: string;
   slug: string;
   description: string | null;
@@ -76,12 +88,15 @@ async function NegocioDashboardContent() {
   const { data: business } = await supabase
     .from("businesses")
     .select(
-      "name, slug, description, district, address, approval_status, rejection_reason",
+      "id, name, slug, description, district, address, approval_status, rejection_reason",
     )
     .eq("owner_id", profile.id)
     .maybeSingle<BusinessRow>();
 
   const counts = await countOwnOffers();
+  const reservationCounts = business
+    ? await countReservationsForBusiness(business.id)
+    : null;
 
   return (
     <div className="space-y-6">
@@ -234,6 +249,67 @@ async function NegocioDashboardContent() {
               >
                 <Plus className="size-4" aria-hidden="true" />
                 Nueva oferta
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {business && reservationCounts ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarCheck className="size-4 text-primary" aria-hidden="true" />
+              Reservas recibidas
+            </CardTitle>
+            <CardDescription>
+              Confirma los pedidos pendientes y registra las entregas con el
+              código del cliente.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <StatLink
+                href="/negocio/reservas?estado=PENDING"
+                label="Por confirmar"
+                value={reservationCounts.PENDING}
+              />
+              <StatLink
+                href="/negocio/reservas?estado=CONFIRMED"
+                label="Por entregar"
+                value={reservationCounts.CONFIRMED}
+              />
+              <StatLink
+                href="/negocio/reservas?estado=DELIVERED"
+                label="Entregadas"
+                value={reservationCounts.DELIVERED}
+              />
+              <StatLink
+                href="/negocio/reservas"
+                label="Total"
+                value={Object.values(reservationCounts).reduce(
+                  (sum, value) => sum + value,
+                  0,
+                )}
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/negocio/reservas"
+                className={buttonVariants({
+                  variant: "outline",
+                  className: "h-9 px-4",
+                })}
+              >
+                Gestionar reservas
+              </Link>
+              <Link
+                href="/negocio/entregas"
+                className={buttonVariants({ className: "h-9 px-4" })}
+              >
+                <KeyRound className="size-4" aria-hidden="true" />
+                Registrar entrega
               </Link>
             </div>
           </CardContent>

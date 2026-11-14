@@ -21,6 +21,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { ReservationForm } from "@/components/reservations/reservation-form";
+import { getSessionProfile } from "@/lib/auth/session";
 import {
   BUSINESS_TYPE_LABEL,
   formatOpeningHours,
@@ -75,8 +77,15 @@ export default function OfferDetailPage({ params }: PageProps) {
 }
 
 async function OfferDetailContent({ params }: PageProps) {
+  // La ficha depende de la sesión y de la hora actual (stock y vigencia del
+  // recojo). `connection()` evita que una revalidación intente prerenderizarla.
+  await connection();
+
   const { id } = await params;
-  const offer = await getPublicOffer(id);
+  const [offer, profile] = await Promise.all([
+    getPublicOffer(id),
+    getSessionProfile(),
+  ]);
 
   if (!offer) notFound();
 
@@ -256,25 +265,25 @@ async function OfferDetailContent({ params }: PageProps) {
             </dl>
           </div>
 
-          <div className="mt-5 rounded-2xl border border-border bg-secondary/50 p-5 text-sm leading-relaxed">
-            <p className="font-medium">Reservas en línea</p>
-            <p className="mt-1 text-muted-foreground">
-              Estamos habilitando las reservas dentro de la aplicación. Por
-              ahora puedes revisar los datos del establecimiento y acercarte
-              dentro del horario de recojo.
-            </p>
-            {business ? (
-              <Link
-                href={`/establecimientos/${business.slug}`}
-                className={buttonVariants({
-                  variant: "outline",
-                  className: "mt-4 h-10 px-4",
-                })}
-              >
-                Ver establecimiento
-              </Link>
-            ) : null}
-          </div>
+          <ReservationForm
+            offerId={offer.id}
+            unitPrice={offer.discountedPrice}
+            availableQuantity={offer.availableQuantity}
+            isAuthenticated={profile !== null}
+            role={profile?.role ?? null}
+          />
+
+          {business ? (
+            <Link
+              href={`/establecimientos/${business.slug}`}
+              className={buttonVariants({
+                variant: "ghost",
+                className: "mt-3 h-9 px-3 text-muted-foreground",
+              })}
+            >
+              Ver establecimiento
+            </Link>
+          ) : null}
         </div>
       </div>
 

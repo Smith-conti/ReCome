@@ -29,7 +29,8 @@ Los índices de cada área redirigen a su dashboard.
 |---|---|---|
 | `/cliente` | Implementado (redirige a `/cliente/dashboard`) | `src/app/cliente/page.tsx` |
 | `/cliente/dashboard` | Implementado (Fase 3) | `src/app/cliente/dashboard/page.tsx` |
-| `/cliente/reservas` | Pendiente (Fase 6) | — |
+| `/cliente/reservas` | Implementado (Fase 6) | `src/app/cliente/reservas/page.tsx` |
+| `/cliente/reservas/[id]` | Implementado (Fase 6) | `src/app/cliente/reservas/[id]/page.tsx` |
 | `/cliente/perfil` | Implementado (Fase 3) | `src/app/cliente/perfil/page.tsx` |
 
 ## Negocio
@@ -42,8 +43,8 @@ Los índices de cada área redirigen a su dashboard.
 | `/negocio/ofertas` | Implementado (Fase 5) | `src/app/negocio/ofertas/page.tsx` |
 | `/negocio/ofertas/nueva` | Implementado (Fase 5) | `src/app/negocio/ofertas/nueva/page.tsx` |
 | `/negocio/ofertas/[id]/editar` | Implementado (Fase 5) | `src/app/negocio/ofertas/[id]/editar/page.tsx` |
-| `/negocio/reservas` | Pendiente (Fase 6) | — |
-| `/negocio/entregas` | Pendiente (Fase 6) | — |
+| `/negocio/reservas` | Implementado (Fase 6) | `src/app/negocio/reservas/page.tsx` |
+| `/negocio/entregas` | Implementado (Fase 6) | `src/app/negocio/entregas/page.tsx` |
 
 ## Administración
 
@@ -55,7 +56,7 @@ Los índices de cada área redirigen a su dashboard.
 | `/admin/negocios/[id]` | Implementado (Fase 4) | `src/app/admin/negocios/[id]/page.tsx` |
 | `/admin/usuarios` | No implementado (el esquema no tiene estado de usuario) | — |
 | `/admin/ofertas` | Implementado (Fase 5, solo lectura) | `src/app/admin/ofertas/page.tsx` |
-| `/admin/reservas` | Pendiente (Fase 6) | — |
+| `/admin/reservas` | Implementado (Fase 6, solo lectura) | `src/app/admin/reservas/page.tsx` |
 | `/admin/reportes` | Pendiente (Fase 7) | — |
 
 ## Reglas de acceso
@@ -102,3 +103,27 @@ Los índices de cada área redirigen a su dashboard.
   administrativas que el esquema no registra.
 - Las fechas de los formularios se interpretan en hora de Perú (UTC-5) y se
   envían como ISO con desplazamiento `-05:00`.
+
+## Reglas de la Fase 6
+
+- Solo una cuenta `CLIENT` puede reservar. El formulario aparece en
+  `/ofertas/[id]`; sin sesión muestra los CTA de acceso y con otro rol explica
+  que la reserva es para clientes.
+- La reserva se crea con `create_reservation`, que valida stock, oferta activa,
+  horario de recojo, límite de 5 reservas activas y genera un código único de
+  6 caracteres (sin `O`, `I`, `0` ni `1`).
+- El código de recojo se muestra al cliente en `/cliente/reservas` y en el
+  detalle. **No** se muestra en `/negocio/reservas` ni en `/admin/reservas`.
+- El comercio confirma con `confirm_reservation` y registra la entrega en
+  `/negocio/entregas` escribiendo el código; la acción busca la reserva por
+  `pickup_code` bajo RLS y llama a `deliver_reservation`.
+- Una entrega exige estado `CONFIRMED`. Cinco códigos incorrectos bloquean la
+  reserva y solo un administrador puede revisarla.
+- El cliente puede cancelar mientras el horario de recojo no haya empezado; la
+  cancelación devuelve el stock y redirige con un aviso visible.
+- `expire_reservations` corre desde `/api/cron/expire-reservations` cada 15
+  minutos (`vercel.json`), protegido con `CRON_SECRET` y la clave secreta de
+  Supabase. Marca `EXPIRED` y devuelve el stock.
+- `/admin/reservas` es de solo lectura y no expone códigos de recojo.
+- Para leer los datos de una oferta ya inactiva desde el historial del cliente,
+  `supabase/fase6.sql` añade la política `offers_select_customer_reservations`.

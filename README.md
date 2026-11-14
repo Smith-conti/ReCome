@@ -74,6 +74,7 @@ src/
 │   ├── auth/          # formularios de acceso y perfil
 │   ├── business/      # formulario de establecimiento
 │   ├── offers/        # tarjetas, formulario, imagen, estado y stock
+│   ├── reservations/  # formulario, acciones y validación de códigos
 │   ├── admin/         # panel de revisión de comercios
 │   ├── dashboard/     # estructura de los paneles privados
 │   └── public/        # componentes de páginas públicas
@@ -81,8 +82,9 @@ src/
 │   ├── auth/          # sesión, roles, rutas y Server Actions
 │   ├── business/      # consultas y Server Actions de comercios
 │   ├── offers/        # tipos, consultas, Server Actions y estado
+│   ├── reservations/  # tipos, consultas y Server Actions de reservas
 │   ├── supabase/      # clientes de navegador y servidor
-│   ├── validations/   # esquemas Zod (incluye ofertas)
+│   ├── validations/   # esquemas Zod (ofertas y reservas)
 │   ├── format.ts      # formatos de fecha, hora y moneda
 │   └── utils.ts
 ├── services/          # lógica de acceso a datos (fases siguientes)
@@ -94,6 +96,7 @@ supabase/
 ├── config.toml
 ├── consolidado.sql    # todas las migraciones en un solo script
 ├── fase4.sql          # migración incremental de la Fase 4 (proyecto existente)
+├── fase6.sql          # migración incremental de la Fase 6 (proyecto existente)
 └── migrations/        # esquema, RLS, funciones y seed
 ```
 
@@ -108,9 +111,9 @@ El detalle del modelo, las políticas RLS, las funciones RPC y las instrucciones
 de aplicación está en [`docs/base-de-datos.md`](docs/base-de-datos.md).
 
 > Las migraciones de las Fases 2 y 3 están aplicadas al proyecto real de
-> Supabase. Las dos migraciones de la Fase 4 están en
-> `supabase/fase4.sql`, un script incremental de una sola ejecución para ese
-> proyecto. `supabase/consolidado.sql` reúne las 10 migraciones para recrear el
+> Supabase. Las migraciones de las Fases 4 y 6 están en `supabase/fase4.sql` y
+> `supabase/fase6.sql`, scripts incrementales de una sola ejecución para ese
+> proyecto. `supabase/consolidado.sql` reúne las 11 migraciones para recrear el
 > esquema desde cero.
 
 Los datos de demostración se cargan con `node supabase/seed/datos-prueba.mjs`
@@ -125,7 +128,7 @@ protección de rutas y cuentas de prueba está en
 
 ## Estado del proyecto
 
-Fases 1, 2, 3, 4 y 5 implementadas:
+Fases 1, 2, 3, 4, 5 y 6 implementadas:
 
 - proyecto Next.js, diseño base, identidad visual y landing responsive;
 - configuración de Supabase SSR;
@@ -143,15 +146,22 @@ Fases 1, 2, 3, 4 y 5 implementadas:
   Storage, stock, publicación, pausa y archivado;
 - catálogo público `/ofertas` con búsqueda y filtro por categoría, ficha de
   oferta `/ofertas/[id]`, directorio `/establecimientos` y ficha por comercio;
-- consulta administrativa de todas las ofertas en `/admin/ofertas`.
+- consulta administrativa de todas las ofertas en `/admin/ofertas`;
+- reservas de excedentes desde la ficha pública, con código de recojo de 6
+  caracteres, historial de estados y cancelación con devolución de stock;
+- gestión de reservas por el comercio, confirmación y entrega mediante la
+  validación del código en `/negocio/entregas`;
+- supervisión de solo lectura de todas las reservas en `/admin/reservas`;
+- vencimiento automático de reservas con un endpoint de cron protegido por
+  `CRON_SECRET` (`vercel.json`).
 
-Las rutas de reservas y los reportes seguirán mostrando estados vacíos
-explícitos hasta que se implementen las fases 6 y 7. No hay pagos en línea ni
-datos simulados.
+Las estadísticas y los reportes de la Fase 7 siguen pendientes. No hay pagos en
+línea ni datos simulados.
 
-> La Fase 4 está cerrada y validada. La Fase 5 tiene el código completo y
-> verificado con `lint`, `tsc` y `build`; falta la prueba funcional en navegador
-> con cuentas reales.
+> La Fase 6 tiene el código completo y verificado con `lint`, `tsc`, `build`,
+> pruebas REST y una prueba funcional en Chrome. Para que el historial de una
+> reserva inactiva muestre los datos de su oferta, aplica `supabase/fase6.sql`
+> en el proyecto de Supabase.
 
 ## Despliegue en Vercel
 

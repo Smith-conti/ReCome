@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Building2,
+  CalendarCheck,
+  KeyRound,
   LayoutDashboard,
   ShoppingBag,
   Store,
@@ -18,17 +20,21 @@ const NAV_BY_ROLE: Record<
 > = {
   CLIENT: [
     { href: "/cliente/dashboard", label: "Resumen", icon: LayoutDashboard },
+    { href: "/cliente/reservas", label: "Mis reservas", icon: CalendarCheck },
     { href: "/cliente/perfil", label: "Mi perfil", icon: UserRound },
   ],
   BUSINESS: [
     { href: "/negocio/dashboard", label: "Resumen", icon: LayoutDashboard },
     { href: "/negocio/ofertas", label: "Ofertas", icon: ShoppingBag },
+    { href: "/negocio/reservas", label: "Reservas", icon: CalendarCheck },
+    { href: "/negocio/entregas", label: "Entregas", icon: KeyRound },
     { href: "/negocio/perfil", label: "Mi establecimiento", icon: Store },
   ],
   ADMIN: [
     { href: "/admin/dashboard", label: "Resumen", icon: LayoutDashboard },
     { href: "/admin/negocios", label: "Comercios", icon: Building2 },
     { href: "/admin/ofertas", label: "Ofertas", icon: ShoppingBag },
+    { href: "/admin/reservas", label: "Reservas", icon: CalendarCheck },
   ],
 };
 
