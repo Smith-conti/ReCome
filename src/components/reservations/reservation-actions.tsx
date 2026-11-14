@@ -93,9 +93,10 @@ export function ReservationActions({
         </div>
       ) : null}
       {confirmState.status === "success" && confirmState.message ? (
-        <div className="mt-2">
-          <FormAlert tone="success">{confirmState.message}</FormAlert>
-        </div>
+        <p role="status" className="mt-2 flex items-center gap-1.5 text-xs font-medium text-primary">
+          <Check className="size-3.5 shrink-0" aria-hidden="true" />
+          Confirmada · QR listo
+        </p>
       ) : null}
       {cancelState.status === "error" && cancelState.message ? (
         <div className="mt-2">

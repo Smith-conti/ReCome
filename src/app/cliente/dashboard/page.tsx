@@ -73,11 +73,12 @@ async function ClienteDashboardContent() {
             Mis reservas
           </CardTitle>
           <CardDescription>
-            Consulta tus reservas activas, su código de recojo y tu historial.
+            Consulta tus reservas activas, su QR de recojo y tu historial.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+            <StatLink href="/cliente/reservas?estado=PENDING_PAYMENT" label="Por pagar (simulado)" value={counts.PENDING_PAYMENT} />
             <StatLink
               href="/cliente/reservas?estado=PENDING"
               label="Pendientes"
@@ -133,7 +134,7 @@ async function ClienteDashboardContent() {
                   </div>
                   <span className="flex shrink-0 items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 font-mono text-sm tracking-[0.2em]">
                     <Ticket className="size-3.5" aria-hidden="true" />
-                    {reservation.pickupCode}
+                    {reservation.status === "CONFIRMED" ? "Ver QR" : reservation.status === "PENDING_PAYMENT" ? "Completar pago simulado" : "Esperando confirmación"}
                   </span>
                 </Link>
               ))}

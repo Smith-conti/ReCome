@@ -26,6 +26,8 @@ import {
 } from "@/components/ui/card";
 import { DashboardBodySkeleton } from "@/components/dashboard/dashboard-skeleton";
 import { ReservationActions } from "@/components/reservations/reservation-actions";
+import { SimulatedPaymentForm, ReservationDeadline } from "@/components/reservations/simulated-payment-form";
+import { PickupQr } from "@/components/reservations/pickup-qr";
 import { requireSessionProfile } from "@/lib/auth/session";
 import { formatDateTime, formatPrice, formatTimeRange } from "@/lib/format";
 import { getReservationForCustomer } from "@/lib/reservations/queries";
@@ -83,10 +85,9 @@ async function ClienteReservaDetailContent({
   const justCreated = firstParam(creada) === "1";
   const justCancelled = firstParam(cancelada) === "1";
   const active = isActiveReservationStatus(reservation.status);
-  const pickupStarted = reservation.offer
-    ? new Date() >= new Date(reservation.offer.pickupStart)
-    : false;
-  const canCancel = active && !pickupStarted;
+  const canCancel = active && (reservation.status !== "CONFIRMED" || (
+    reservation.offer && new Date().getTime() <= Date.parse(reservation.offer.pickupStart) - 60 * 60 * 1000
+  ));
   const mapQuery = reservation.business
     ? [
         reservation.business.address,
@@ -132,8 +133,7 @@ async function ClienteReservaDetailContent({
 
       {justCreated ? (
         <FormAlert tone="success">
-          Reservamos tu excedente y descontamos el stock. Guarda tu código de
-          recojo: lo necesitarás para retirar el pedido.
+          Reservamos tu excedente y retuvimos el stock. Completa el pago simulado y espera la confirmación para obtener tu QR de recojo.
         </FormAlert>
       ) : null}
 
@@ -167,7 +167,7 @@ async function ClienteReservaDetailContent({
                 />
                 <DetailItem
                   icon={Ticket}
-                  label="Total a pagar"
+                  label="Total simulado"
                   value={formatPrice(reservation.totalPrice)}
                 />
                 <DetailItem
@@ -200,9 +200,10 @@ async function ClienteReservaDetailContent({
               </dl>
 
               <p className="mt-4 border-t border-border pt-4 text-xs leading-relaxed text-muted-foreground">
-                El pago se coordina directamente en el establecimiento. Si no
-                recoges antes del vencimiento, la reserva se marca como vencida
-                y el stock vuelve a la oferta.
+                El pago es simulado y no mueve dinero real. Si no completas el
+                pago en 10 minutos o el comercio no confirma en 15 minutos, se
+                cancela la reserva y se libera el stock. Si no recoges, se
+                registra como no recogida, sin comisión.
               </p>
             </CardContent>
           </Card>
@@ -251,26 +252,36 @@ async function ClienteReservaDetailContent({
         </div>
 
         <div className="space-y-5">
+          {reservation.status === "PENDING_PAYMENT" ? (
+            <SimulatedPaymentForm reservationId={reservation.id} total={reservation.totalPrice} expiresAt={reservation.expiresAt} />
+          ) : null}
+          {reservation.status === "PENDING" ? (
+            <div className="space-y-2 rounded-2xl border border-border bg-card p-5">
+              <h2 className="text-xl">Esperando al comercio</h2>
+              <p className="text-sm">El comercio debe confirmar en 15 minutos. Si no responde, se cancela y se libera el stock. El QR aparecerá después de confirmar.</p>
+              <ReservationDeadline expiresAt={reservation.expiresAt} />
+            </div>
+          ) : null}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Ticket className="size-4 text-primary" aria-hidden="true" />
-                Código de recojo
+                QR de recojo
               </CardTitle>
               <CardDescription>
-                Muéstralo en el establecimiento al recoger tu pedido.
+                Disponible cuando el comercio confirme tu reserva.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {active ? (
+              {reservation.status === "CONFIRMED" && reservation.pickupToken && reservation.workflowVersion === 2 ? (
+                <PickupQr reservationId={reservation.id} token={reservation.pickupToken} />
+              ) : reservation.status === "CONFIRMED" && reservation.workflowVersion === 1 ? (
                 <div className="rounded-2xl border-2 border-dashed border-primary/40 bg-secondary/60 px-4 py-6 text-center">
                   <p className="font-mono text-3xl font-semibold tracking-[0.35em]">
                     {reservation.pickupCode}
                   </p>
                   <p className="mt-2 text-xs text-muted-foreground">
-                    {reservation.status === "PENDING"
-                      ? "El comercio todavía debe confirmar tu reserva."
-                      : "Reserva confirmada: ya puedes recogerla."}
+                    Reserva anterior: muestra este código dentro del horario de recojo.
                   </p>
                 </div>
               ) : (
@@ -289,7 +300,7 @@ async function ClienteReservaDetailContent({
                         className="size-4 text-muted-foreground"
                         aria-hidden="true"
                       />
-                      Esta reserva ya no está activa.
+                      {active ? "El QR se habilita únicamente después de la confirmación del comercio." : "Esta reserva ya no está activa y su QR no se puede usar."}
                     </p>
                   )}
                 </div>
@@ -303,8 +314,8 @@ async function ClienteReservaDetailContent({
                 <CardTitle>¿No podrás recogerla?</CardTitle>
                 <CardDescription>
                   {canCancel
-                    ? "Puedes cancelar sin costo antes de que empiece el horario de recojo. El stock vuelve a la oferta."
-                    : "El horario de recojo ya comenzó. Contacta directamente al establecimiento para coordinar la cancelación."}
+                    ? "Puedes cancelar. Las reservas confirmadas admiten cancelación hasta 60 minutos antes del recojo."
+                    : "Terminó el plazo de cancelación de la reserva confirmada. Contacta al establecimiento."}
                 </CardDescription>
               </CardHeader>
               {canCancel ? (

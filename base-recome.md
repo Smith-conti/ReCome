@@ -1,3 +1,5 @@
+> **Actualización autorizada — 14/11/2026:** La primera entrega SRS incorpora pago simulado (sin dinero real), máximo 5 unidades, plazos de 10/15 minutos, QR tras confirmación, recojo dentro del horario y comisión simulada configurable. Estas reglas sustituyen las exclusiones de pago, QR y comisión del alcance inicial descrito más abajo. Ver `docs/entrega-srs-1.md`. La fase 7 sigue pendiente.
+
 # PROMPT MAESTRO — DESARROLLO DE RECOME
 
 ## 1. ROL Y RESPONSABILIDAD

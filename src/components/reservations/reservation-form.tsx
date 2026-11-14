@@ -32,7 +32,7 @@ export function ReservationForm({
   );
   const [quantity, setQuantity] = useState(1);
 
-  const maxQuantity = Math.min(Math.max(availableQuantity, 0), 10);
+  const maxQuantity = Math.min(Math.max(availableQuantity, 0), 5);
 
   if (!isAuthenticated) {
     return (
@@ -43,7 +43,7 @@ export function ReservationForm({
         </p>
         <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
           Inicia sesión para reservar. Al reservar se descuenta el stock y
-          recibirás un código de recojo para mostrar en el establecimiento.
+          tendrás 10 minutos para completar el pago simulado.
         </p>
         <div className="mt-4 flex flex-col gap-2 sm:flex-row">
           <Link
@@ -112,8 +112,8 @@ export function ReservationForm({
         Reservar este excedente
       </p>
       <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-        El stock se reserva de inmediato. Recibirás un código de 6 caracteres
-        para recoger y pagar en el establecimiento.
+        El stock se retiene por 10 minutos para el pago simulado. El QR se genera
+        cuando el comercio confirme, en un máximo de 15 minutos.
       </p>
 
       {state.status === "error" && state.message ? (
@@ -172,11 +172,11 @@ export function ReservationForm({
           ) : (
             <ShoppingBag aria-hidden="true" />
           )}
-          {pending ? "Creando reserva..." : "Reservar y ver mi código"}
+          {pending ? "Creando reserva..." : "Reservar y continuar al pago simulado"}
         </Button>
 
         <p className="text-xs leading-relaxed text-muted-foreground">
-          No se realizan pagos en línea. Puedes cancelar sin costo antes de que
+          No se cobra dinero real. Las reservas confirmadas se pueden cancelar hasta 60 minutos antes de que
           empiece el horario de recojo. Mantén como máximo 5 reservas activas.
         </p>
       </form>

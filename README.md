@@ -1,3 +1,5 @@
+> **Primera entrega SRS:** flujo de reserva, pago simulado, confirmación y QR incorporado. Consulta [alcance, migraciones y pruebas](docs/entrega-srs-1.md). Las descripciones del alcance original que aparecen más abajo son históricas.
+
 # ReCome
 
 Plataforma web que conecta a consumidores con panaderías, pastelerías, cafeterías, heladerías y restaurantes de Cusco que tienen excedentes de alimentos, para que puedan reservarlos a precios reducidos y recogerlos en el establecimiento.

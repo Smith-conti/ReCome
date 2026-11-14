@@ -200,33 +200,11 @@ async function resetDemoReservations(clientIds) {
   );
 
   const active = rows.filter(
-    (row) => row.status === "PENDING" || row.status === "CONFIRMED",
+    (row) => ["PENDING_PAYMENT", "PENDING", "CONFIRMED"].includes(row.status),
   );
-  const perOffer = new Map();
-
+  const adminToken = await signIn(ADMIN_EMAIL, PASSWORD);
   for (const row of active) {
-    perOffer.set(
-      row.offer_id,
-      (perOffer.get(row.offer_id) ?? 0) + row.quantity,
-    );
-  }
-
-  for (const [offerId, quantity] of perOffer) {
-    const offer = await api(
-      `/rest/v1/offers?select=available_quantity,initial_quantity,title&id=eq.${offerId}`,
-    );
-    const current = offer[0];
-    if (!current) continue;
-
-    const next = Math.min(
-      current.available_quantity + quantity,
-      current.initial_quantity,
-    );
-    await api(`/rest/v1/offers?id=eq.${offerId}`, {
-      method: "PATCH",
-      headers: { Prefer: "return=minimal" },
-      body: JSON.stringify({ available_quantity: next }),
-    });
+    await rpcAs("cancel_reservation", { p_reservation_id: row.id }, adminToken);
   }
 
   if (rows.length > 0) {
@@ -369,11 +347,12 @@ console.log("\n▸ Generando reservas e historial…\n");
 let offerCursor = 0;
 const records = [];
 const counts = {
+  PENDING_PAYMENT: 0,
   PENDING: 0,
   CONFIRMED: 0,
   DELIVERED: 0,
   CANCELLED: 0,
-  EXPIRED: 0,
+  NO_SHOW: 0,
 };
 const expiredIds = [];
 
@@ -392,7 +371,7 @@ function takeOffer(quantity) {
 }
 
 async function createReservation(intent, clientToken, index) {
-  const quantity = Math.min(Math.max(intent.quantity, 1), 10);
+  const quantity = Math.min(Math.max(intent.quantity, 1), 5);
   const offer = takeOffer(quantity);
 
   if (!offer) {
@@ -412,7 +391,12 @@ async function createReservation(intent, clientToken, index) {
     minutesAgo: 45 + ((index * 53) % 240),
   };
 
-  if (intent.type === "CONFIRMED" || intent.type === "DELIVERED") {
+  if (["PENDING", "CONFIRMED", "DELIVERED", "NO_SHOW"].includes(intent.type)) {
+    const paid = await rpcAs("simulate_reservation_payment", { p_reservation_id: created.id }, clientToken);
+    if (!paid.ok) throw new Error("No se pudo registrar el pago simulado demo.");
+  }
+  let confirmed;
+  if (["CONFIRMED", "DELIVERED", "NO_SHOW"].includes(intent.type)) {
     const ownerToken = await tokenFor(offer.business_id);
     await rpcAs(
       "confirm_reservation",
@@ -422,10 +406,16 @@ async function createReservation(intent, clientToken, index) {
   }
 
   if (intent.type === "DELIVERED") {
+    // Fixture histórica: ajustar únicamente el horario de esta reserva demo,
+    // sin modificar la oferta ni relajar las validaciones de las RPC.
+    await api(`/rest/v1/reservations?id=eq.${created.id}`, {
+      method: "PATCH", headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({ pickup_start_snapshot: new Date(Date.now()-300000).toISOString() }),
+    });
     const ownerToken = await tokenFor(offer.business_id);
     const result = await rpcAs(
       "deliver_reservation",
-      { p_reservation_id: created.id, p_code: created.pickup_code },
+      { p_reservation_id: created.id, p_code: confirmed.pickup_token },
       ownerToken,
     );
 
@@ -444,7 +434,7 @@ async function createReservation(intent, clientToken, index) {
     );
   }
 
-  if (intent.type === "EXPIRED") {
+  if (intent.type === "NO_SHOW") {
     await api(`/rest/v1/reservations?id=eq.${created.id}`, {
       method: "PATCH",
       headers: { Prefer: "return=minimal" },
@@ -486,7 +476,7 @@ for (const [clientIndex, client] of pendingClients.entries()) {
 }
 
 // ---------------------------------------------------------------------------
-// 7. Vencer las reservas marcadas como EXPIRED
+// 7. Vencer las reservas marcadas como NO_SHOW
 // ---------------------------------------------------------------------------
 if (expiredIds.length > 0) {
   const expired = await api("/rest/v1/rpc/expire_reservations", {
@@ -501,10 +491,11 @@ if (expiredIds.length > 0) {
 // ---------------------------------------------------------------------------
 const EVENT_OFFSET_MINUTES = {
   CREATED: 0,
-  CONFIRMED: 25,
+  PAYMENT_SIMULATED: 2,
+  CONFIRMED: 5,
   DELIVERED: 150,
   CANCELLED: 15,
-  EXPIRED: 300,
+  NO_SHOW: 300,
 };
 
 for (const record of records) {
@@ -512,9 +503,19 @@ for (const record of records) {
     Date.now() - record.daysAgo * DAY_MS - record.minutesAgo * 60 * 1000;
   const base = new Date(baseMs);
 
+  // Los estados activos conservan sus tiempos reales y plazos cortos.
+  if (["PENDING_PAYMENT", "PENDING", "CONFIRMED"].includes(record.type)) continue;
   const patch = { created_at: base.toISOString() };
-  if (record.type === "EXPIRED") {
-    patch.expires_at = new Date(baseMs + 12 * 60 * 60 * 1000).toISOString();
+  if (["DELIVERED", "NO_SHOW"].includes(record.type)) {
+    patch.paid_at = new Date(baseMs + 3*60000).toISOString();
+    patch.confirmed_at = new Date(baseMs + 7*60000).toISOString();
+    patch.pickup_start_snapshot = new Date(baseMs + 60*60000).toISOString();
+    patch.pickup_end_snapshot = new Date(baseMs + 300*60000).toISOString();
+    patch.expires_at = patch.pickup_end_snapshot;
+    if (record.type === "DELIVERED") patch.delivered_at = new Date(baseMs + 153*60000).toISOString();
+  }
+  if (record.type === "NO_SHOW") {
+    patch.expires_at = patch.pickup_end_snapshot;
   }
 
   await api(`/rest/v1/reservations?id=eq.${record.id}`, {

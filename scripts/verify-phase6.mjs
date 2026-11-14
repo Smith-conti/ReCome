@@ -56,7 +56,7 @@ async function offer(owner, category, label) {
     title: `Verificación ${label} ${run}`, description: "Datos temporales de verificación funcional.",
     original_price: 20, discounted_price: 8, initial_quantity: 10,
     available_quantity: 10, status: "DRAFT",
-    pickup_start: new Date(Date.now() + 3600000).toISOString(),
+    pickup_start: new Date(Date.now() - 300000).toISOString(),
     pickup_end: new Date(Date.now() + 7200000).toISOString(),
   }));
   offerIds.push(id);
@@ -91,27 +91,30 @@ try {
   const id = await offer(owner.client, category, "reservas");
   ok((await value(anonymous.from("offers").select("id").eq("id", id))).length === 1, "Oferta publicada visible en catálogo público");
   const first = await reserve(customer.client, id, 2);
-  ok(first.status === "PENDING" && first.quantity === 2 && Number(first.total_price) === 16, "Reserva con precio y total calculados en servidor");
-  ok(/^[AC-HJ-NP-Z2-79]{6}$/.test(first.pickup_code), "Código de recojo válido de seis caracteres");
+  ok(first.status === "PENDING_PAYMENT" && first.quantity === 2 && Number(first.total_price) === 16, "Reserva con precio y total calculados en servidor");
+  ok(first.pickup_code === null && first.pickup_token === null, "No hay QR antes del pago y confirmación");
   ok(await stock(id) === 8, "Reserva descuenta stock");
-  ok(Boolean((await customer.client.rpc("create_reservation", { p_offer_id: id, p_quantity: 9 })).error) && await stock(id) === 8, "Stock insuficiente no crea reserva ni altera existencias");
+  ok(Boolean((await customer.client.rpc("create_reservation", { p_offer_id: id, p_quantity: 9 })).error) && await stock(id) === 8, "Más de cinco unidades no crea reserva ni altera existencias");
   ok((await value(stranger.client.from("reservations").select("id").eq("id", first.id))).length === 0, "Otro cliente no puede leer la reserva");
   ok(Boolean((await stranger.client.rpc("confirm_reservation", { p_reservation_id: first.id })).error), "Otro cliente no puede confirmar entregas");
+  ok(Boolean((await owner.client.rpc("confirm_reservation", { p_reservation_id: first.id })).error), "No se confirma sin pago simulado");
+  const payment = await value(customer.client.rpc("simulate_reservation_payment", { p_reservation_id: first.id }));
+  ok(payment.ok && payment.reservation.status === "PENDING", "Pago simulado habilita confirmación");
   const confirmed = await value(owner.client.rpc("confirm_reservation", { p_reservation_id: first.id }));
   ok(confirmed.status === "CONFIRMED", "Comercio confirma la reserva");
   const wrong = await value(owner.client.rpc("deliver_reservation", { p_reservation_id: first.id, p_code: "ZZZZZZ" === first.pickup_code ? "AAAAAA" : "ZZZZZZ" }));
   ok(wrong.error === "invalid_code" && wrong.failed_attempts === 1, "Código incorrecto registra un intento fallido");
-  const delivered = await value(owner.client.rpc("deliver_reservation", { p_reservation_id: first.id, p_code: first.pickup_code }));
-  ok(delivered.ok === true, "Entrega con código correcto");
-  const repeated = await value(owner.client.rpc("deliver_reservation", { p_reservation_id: first.id, p_code: first.pickup_code }));
-  ok(repeated.already_delivered === true && await stock(id) === 8, "Entrega idempotente");
+  const delivered = await value(owner.client.rpc("deliver_reservation", { p_reservation_id: first.id, p_code: confirmed.pickup_token }));
+  ok(delivered.ok === true && Number(delivered.reservation.commission_amount) === 1.6 && Number(delivered.reservation.business_net_amount) === 14.4, "Entrega con QR y comisión simulada del 10 %");
+  const repeated = await value(owner.client.rpc("deliver_reservation", { p_reservation_id: first.id, p_code: confirmed.pickup_token }));
+  ok(repeated.error === "already_delivered" && await stock(id) === 8, "QR repetido rechazado sin duplicar entrega");
   const events = await value(customer.client.from("reservation_events").select("event").eq("reservation_id", first.id));
-  ok(["CREATED", "CONFIRMED", "DELIVERED"].every(e => events.filter(row => row.event === e).length === 1), "Historial de creación, confirmación y entrega sin duplicados");
+  ok(["CREATED", "PAYMENT_SIMULATED", "CONFIRMED", "DELIVERED"].every(e => events.filter(row => row.event === e).length === 1), "Historial de creación, confirmación y entrega sin duplicados");
 
   const cancelled = await reserve(customer.client, id);
   await value(customer.client.rpc("cancel_reservation", { p_reservation_id: cancelled.id }));
   const secondCancellation = await customer.client.rpc("cancel_reservation", { p_reservation_id: cancelled.id });
-  ok(Boolean(secondCancellation.error) && await stock(id) === 8, "Cancelación repetida rechazada sin duplicar la devolución de stock");
+  ok(secondCancellation.data?.status === "CANCELLED" && await stock(id) === 8, "Cancelación repetida idempotente sin duplicar la devolución de stock");
   await value(owner.client.rpc("set_offer_status", { p_offer_id: id, p_status: "PAUSED" }));
   ok((await value(anonymous.from("offers").select("id").eq("id", id))).length === 0, "Oferta pausada oculta al público");
   ok((await value(customer.client.from("offers").select("title").eq("id", id))).length === 1, "Historial conserva la oferta inactiva del cliente (fase6.sql)");
@@ -125,8 +128,8 @@ try {
   ok(Boolean((await anonymous.rpc("expire_reservations")).error), "Visitante anónimo no puede ejecutar vencimientos");
   await value(service.rpc("expire_reservations"));
   await value(service.rpc("expire_reservations"));
-  ok((await value(service.from("reservations").select("status").eq("id", expired.id).single())).status === "EXPIRED" && await stock(expiryId) === 10, "Vencimiento idempotente devuelve stock");
-  ok((await value(customer.client.from("reservation_events").select("event").eq("reservation_id", expired.id).eq("event", "EXPIRED"))).length === 1, "Un único evento de vencimiento");
+  ok((await value(service.from("reservations").select("status").eq("id", expired.id).single())).status === "CANCELLED" && await stock(expiryId) === 10, "Vencimiento idempotente devuelve stock");
+  ok((await value(customer.client.from("reservation_events").select("event").eq("reservation_id", expired.id).eq("event", "CANCELLED"))).length === 1, "Un único evento de vencimiento");
 
   imagePath = `${businessId}/verify-${run}.png`;
   const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aF1sAAAAASUVORK5CYII=", "base64");

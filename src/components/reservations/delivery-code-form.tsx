@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
-import { KeyRound, Loader2 } from "lucide-react";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { Camera, KeyRound, Loader2 } from "lucide-react";
 import { FormAlert } from "@/components/auth/fields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,23 +14,58 @@ export function DeliveryCodeForm() {
     deliverReservationAction,
     initialReservationState,
   );
-  const formRef = useRef<HTMLFormElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const scannerRef = useRef<{ stop(): void } | null>(null);
+  const scanId = useRef(0);
+  const [code, setCode] = useState("");
+  const [scanning, setScanning] = useState(false);
+  const [cameraError, setCameraError] = useState("");
 
-  useEffect(() => {
-    if (state.status === "success") {
-      formRef.current?.reset();
+  useEffect(() => () => { scanId.current++; scannerRef.current?.stop(); }, []);
+
+  function stopCamera() {
+    scanId.current++;
+    scannerRef.current?.stop();
+    scannerRef.current = null;
+    setScanning(false);
+  }
+
+  async function startCamera() {
+    const attempt = ++scanId.current;
+    setCameraError("");
+    setScanning(true);
+    try {
+      const { BrowserQRCodeReader } = await import("@zxing/browser");
+      if (attempt !== scanId.current || !videoRef.current) return;
+      const reader = new BrowserQRCodeReader();
+      const controls = await reader.decodeFromConstraints(
+        { video: { facingMode: { ideal: "environment" } } }, videoRef.current,
+        (result, _error, control) => {
+          if (!result || attempt !== scanId.current) return;
+          setCode(result.getText());
+          control.stop();
+          scanId.current++;
+          setScanning(false);
+        },
+      );
+      if (attempt !== scanId.current) controls.stop();
+      else scannerRef.current = controls;
+    } catch {
+      if (attempt !== scanId.current) return;
+      setCameraError("No pudimos abrir la cámara. Permite el acceso o pega el contenido del QR.");
+      setScanning(false);
     }
-  }, [state]);
+  }
 
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
       <p className="flex items-center gap-2 font-medium">
         <KeyRound className="size-4 text-primary" aria-hidden="true" />
-        Validar código de recojo
+        Validar QR de recojo
       </p>
       <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-        Pídele el código de 6 caracteres al cliente. Al validarlo, la reserva
-        queda entregada y ya no se puede volver a usar.
+        Escanea el QR del cliente o pega su contenido. Solo se admite dentro
+        del horario de una reserva confirmada y una única vez. La comisión es simulada.
       </p>
 
       {state.status === "error" && state.message ? (
@@ -44,22 +79,31 @@ export function DeliveryCodeForm() {
         </div>
       ) : null}
 
-      <form ref={formRef} action={formAction} className="mt-4 space-y-3">
+      <form action={formAction} className="mt-4 space-y-3">
+        <div className="space-y-2">
+          <Button type="button" variant="outline" onClick={scanning ? stopCamera : startCamera}>
+            <Camera aria-hidden="true" />{scanning ? "Detener cámara" : "Escanear QR con cámara"}
+          </Button>
+          <video ref={videoRef} muted playsInline className={scanning ? "w-full rounded-xl bg-black" : "hidden"} aria-label="Cámara para leer el QR" />
+          {cameraError ? <p role="alert" className="text-sm text-destructive">{cameraError}</p> : null}
+        </div>
         <div className="space-y-1.5">
-          <Label htmlFor="code">Código de recojo</Label>
+          <Label htmlFor="code">Contenido del QR</Label>
           <Input
             id="code"
             name="code"
             autoComplete="off"
             autoCapitalize="characters"
             spellCheck={false}
-            maxLength={6}
-            placeholder="ABC234"
+            value={code}
+            onChange={(event) => setCode(event.target.value)}
+            maxLength={100}
+            placeholder="RECOME:…"
             aria-invalid={state.fieldErrors?.code ? true : undefined}
             aria-describedby={
               state.fieldErrors?.code ? "code-error" : "code-hint"
             }
-            className="h-12 text-center font-mono text-lg tracking-[0.35em] uppercase"
+            className="h-12 font-mono text-sm"
           />
           {state.fieldErrors?.code ? (
             <p id="code-error" className="text-xs text-destructive">
@@ -67,7 +111,7 @@ export function DeliveryCodeForm() {
             </p>
           ) : (
             <p id="code-hint" className="text-xs text-muted-foreground">
-              Solo letras y números. No distingue mayúsculas de minúsculas.
+              Escanea o pega el contenido completo. Para reservas anteriores se admite el código de seis caracteres.
             </p>
           )}
         </div>

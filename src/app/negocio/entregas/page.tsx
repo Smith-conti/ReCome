@@ -73,7 +73,7 @@ async function NegocioEntregasContent() {
           <p className="eyebrow">Panel del comercio</p>
           <h1 className="mt-2 text-3xl">Registrar entrega</h1>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            Valida el código de recojo del cliente para marcar la reserva como
+            Valida el QR de recojo del cliente para marcar la reserva como
             entregada. Solo se pueden entregar reservas confirmadas.
           </p>
         </div>
@@ -143,7 +143,7 @@ async function NegocioEntregasContent() {
       <div className="rounded-xl border border-border bg-secondary/50 px-4 py-3 text-sm leading-relaxed">
         <p className="font-medium">Buenas prácticas</p>
         <p className="mt-0.5 text-muted-foreground">
-          Verifica el código antes de entregar el pedido y confirma que el
+          Verifica el QR antes de entregar el pedido y confirma que el
           cliente recibe la cantidad reservada. Si el código falla cinco veces,
           la reserva se bloquea y solo un administrador puede revisarla.
         </p>

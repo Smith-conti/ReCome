@@ -17,7 +17,7 @@ export const clientes = [
       { type: "DELIVERED", daysAgo: 6, quantity: 2 },
       { type: "CANCELLED", daysAgo: 3, quantity: 1 },
       { type: "CONFIRMED", daysAgo: 0, quantity: 1 },
-      { type: "PENDING", daysAgo: 0, quantity: 1 },
+      { type: "PENDING_PAYMENT", daysAgo: 0, quantity: 1 },
     ],
   },
   {
@@ -26,7 +26,7 @@ export const clientes = [
     phone: "984100202",
     plan: [
       { type: "DELIVERED", daysAgo: 9, quantity: 1 },
-      { type: "EXPIRED", daysAgo: 5, quantity: 1 },
+      { type: "NO_SHOW", daysAgo: 5, quantity: 1 },
       { type: "DELIVERED", daysAgo: 2, quantity: 2 },
       { type: "CONFIRMED", daysAgo: 0, quantity: 1 },
     ],
@@ -47,7 +47,7 @@ export const clientes = [
     phone: "984100404",
     plan: [
       { type: "DELIVERED", daysAgo: 3, quantity: 1 },
-      { type: "EXPIRED", daysAgo: 1, quantity: 1 },
+      { type: "NO_SHOW", daysAgo: 1, quantity: 1 },
       { type: "CONFIRMED", daysAgo: 0, quantity: 1 },
     ],
   },

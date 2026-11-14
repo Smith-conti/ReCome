@@ -51,6 +51,10 @@ function deliverErrorMessage(result: DeliverRpcResult): string {
       return "La reserva no existe.";
     case "forbidden":
       return "Esta reserva no pertenece a tu establecimiento.";
+    case "already_delivered":
+      return "Este QR ya fue utilizado. La reserva ya está entregada.";
+    case "outside_pickup_window":
+      return "El QR solo puede validarse dentro del horario de recojo.";
     case "invalid_status":
       return result.status === "PENDING"
         ? "La reserva todavía está pendiente. Confírmala antes de entregarla."
@@ -151,7 +155,7 @@ export async function cancelReservationAction(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.rpc("cancel_reservation", {
+  const { data, error } = await supabase.rpc("cancel_reservation", {
     p_reservation_id: parsed.data.reservationId,
   });
 
@@ -160,6 +164,10 @@ export async function cancelReservationAction(
   }
 
   revalidateReservationPaths(parsed.data.reservationId);
+
+  if (data?.status !== "CANCELLED") {
+    return { status: "error", message: "Esta reserva ya no se puede cancelar." };
+  }
 
   if (profile.role === "CLIENT") {
     redirect(`/cliente/reservas/${parsed.data.reservationId}?cancelada=1`);
@@ -203,7 +211,7 @@ export async function confirmReservationAction(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.rpc("confirm_reservation", {
+  const { data, error } = await supabase.rpc("confirm_reservation", {
     p_reservation_id: parsed.data.reservationId,
   });
 
@@ -213,9 +221,13 @@ export async function confirmReservationAction(
 
   revalidateReservationPaths(parsed.data.reservationId);
 
+  if (data?.status !== "CONFIRMED") {
+    return { status: "error", message: "Terminó el plazo de confirmación. La reserva ya no puede confirmarse." };
+  }
+
   return {
     status: "success",
-    message: "La reserva quedó confirmada y lista para entregar.",
+    message: "Reserva confirmada. El cliente ya tiene su QR, válido dentro del horario de recojo.",
     reservationId: parsed.data.reservationId,
   };
 }
@@ -257,11 +269,12 @@ export async function deliverReservationAction(
   }
 
   const supabase = await createClient();
-  const { data: match } = await supabase
-    .from("reservations")
-    .select("id")
-    .eq("pickup_code", parsed.data.code)
-    .maybeSingle<{ id: string }>();
+  const qr = parsed.data.code.match(/^RECOME:([0-9a-f-]{36}):([0-9a-f-]{36})$/i);
+  const lookup = supabase.from("reservations").select("id");
+  const { data: match } = await (qr
+    ? lookup.eq("id", qr[1])
+    : lookup.eq("pickup_code", parsed.data.code.toUpperCase()).eq("workflow_version", 1)
+  ).maybeSingle<{ id: string }>();
 
   if (!match) {
     return {
@@ -273,7 +286,7 @@ export async function deliverReservationAction(
 
   const { data, error } = await supabase.rpc("deliver_reservation", {
     p_reservation_id: match.id,
-    p_code: parsed.data.code,
+    p_code: qr ? qr[2].toLowerCase() : parsed.data.code.toUpperCase(),
   });
 
   if (error) {
@@ -293,7 +306,23 @@ export async function deliverReservationAction(
     status: "success",
     message: result.already_delivered
       ? "Esta reserva ya estaba marcada como entregada."
-      : "Entrega registrada. La reserva quedó completada.",
+      : "Entrega registrada. La comisión y el ingreso neto simulados ya están calculados. No se ha movido dinero real.",
     reservationId: match.id,
   };
+}
+
+export async function simulatePaymentAction(
+  _previous: ReservationActionState,
+  formData: FormData,
+): Promise<ReservationActionState> {
+  const profile = await getSessionProfile();
+  if (profile?.role !== "CLIENT") return { status: "error", message: "Ingresa con tu cuenta de cliente." };
+  const parsed = reservationIdSchema.safeParse({ reservationId: readForm(formData, "reservationId") });
+  if (!parsed.success) return { status: "error", message: "La reserva no es válida." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("simulate_reservation_payment", { p_reservation_id: parsed.data.reservationId });
+  revalidateReservationPaths(parsed.data.reservationId);
+  if (error) return { status: "error", message: databaseMessage(error) };
+  if (!data?.ok) return { status: "error", message: "El plazo de pago terminó o esta reserva ya no admite el pago simulado." };
+  return { status: "success", message: "Pago simulado registrado, sin cobro real. El comercio dispone de 15 minutos para confirmar." };
 }

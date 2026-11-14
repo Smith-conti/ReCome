@@ -77,7 +77,7 @@ export async function SiteFooter() {
         <div className="container-page flex flex-col gap-2 py-6 text-xs text-primary-foreground/70 sm:flex-row sm:items-center sm:justify-between">
           <p>© {year} ReCome. Todos los derechos reservados.</p>
           <p>
-            Reservas sin pago en línea: el pago se realiza al recoger el pedido.
+            Pago simulado de prueba. No se cobra dinero ni se solicitan datos bancarios.
           </p>
         </div>
       </div>

@@ -31,6 +31,7 @@ const NAV_BY_ROLE: Record<
     { href: "/negocio/perfil", label: "Mi establecimiento", icon: Store },
   ],
   ADMIN: [
+    { href: "/admin/configuracion", label: "Comisión simulada", icon: Store },
     { href: "/admin/dashboard", label: "Resumen", icon: LayoutDashboard },
     { href: "/admin/negocios", label: "Comercios", icon: Building2 },
     { href: "/admin/ofertas", label: "Ofertas", icon: ShoppingBag },

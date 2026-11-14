@@ -39,8 +39,10 @@ function listHref(status?: string): string {
 }
 
 const STATUS_HINT: Record<ReservationStatus, string> = {
+  PENDING_PAYMENT: "Completa el pago simulado antes de que termine el plazo.",
+  NO_SHOW: "No se recogió dentro del horario. Sin comisión.",
   PENDING: "Esperando la confirmación del comercio.",
-  CONFIRMED: "Lista para recoger. Muestra tu código en el establecimiento.",
+  CONFIRMED: "Confirmada. Abre la reserva para mostrar el QR dentro del horario.",
   DELIVERED: "Recogida completada.",
   CANCELLED: "Cancelada. El stock volvió a la oferta.",
   EXPIRED: "Venció sin recogerse. El stock volvió a la oferta.",
@@ -85,8 +87,8 @@ async function ClienteReservasContent({ searchParams }: PageProps) {
           <p className="eyebrow">Panel del cliente</p>
           <h1 className="mt-2 text-3xl">Mis reservas</h1>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            Revisa el estado de tus excedentes reservados, muestra tu código de
-            recojo y cancela antes de que empiece el horario de recogida.
+            Completa el pago simulado, espera la confirmación y abre tu reserva
+            para mostrar el QR dentro del horario de recojo.
           </p>
         </div>
         <Link
@@ -203,9 +205,9 @@ function ReservationRow({ reservation }: { reservation: Reservation }) {
           <Badge variant={RESERVATION_STATUS_TONE[reservation.status]}>
             {RESERVATION_STATUS_LABEL[reservation.status]}
           </Badge>
-          {active ? (
+          {active && reservation.status === "CONFIRMED" ? (
             <span className="rounded-md bg-secondary px-2 py-0.5 font-mono text-xs tracking-[0.2em]">
-              {reservation.pickupCode}
+              Abrir QR de recojo
             </span>
           ) : null}
         </div>

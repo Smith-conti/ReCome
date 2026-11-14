@@ -49,8 +49,10 @@ function listHref(status?: string): string {
 }
 
 const STATUS_HINT: Record<ReservationStatus, string> = {
-  PENDING: "Confírmala cuando tengas listo el pedido.",
-  CONFIRMED: "El cliente ya puede recogerla con su código.",
+  PENDING_PAYMENT: "El cliente debe completar el pago simulado antes de confirmar.",
+  NO_SHOW: "No se recogió dentro del horario. Sin comisión.",
+  PENDING: "Confirma o rechaza dentro de los 15 minutos posteriores al pago simulado.",
+  CONFIRMED: "QR listo para validar dentro del horario de recojo.",
   DELIVERED: "Entrega completada.",
   CANCELLED: "Cancelada; el stock volvió a la oferta.",
   EXPIRED: "Venció sin recogerse; el stock volvió a la oferta.",
@@ -309,7 +311,7 @@ function BusinessReservationRow({
         </div>
       </div>
 
-      <div className="flex shrink-0 flex-col gap-2 lg:items-end">
+      <div className="flex min-w-0 flex-col gap-2 lg:w-56 lg:shrink-0 lg:items-end">
         <ReservationActions
           reservationId={reservation.id}
           showConfirm={reservation.status === "PENDING"}
@@ -317,8 +319,15 @@ function BusinessReservationRow({
             reservation.status === "PENDING" ||
             reservation.status === "CONFIRMED"
           }
-          confirmLabel="Confirmar reserva"
+          confirmLabel="Confirmar y generar QR"
+          cancelLabel={reservation.status === "PENDING" ? "Rechazar reserva" : "Cancelar"}
+          className="w-full [&>div:first-child]:lg:justify-end"
         />
+        {reservation.status === "DELIVERED" && reservation.workflowVersion === 2 ? (
+          <p className="text-sm text-muted-foreground">
+            Comisión simulada: {formatPrice(reservation.commissionAmount)} · Neto simulado: {formatPrice(reservation.businessNetAmount)}
+          </p>
+        ) : null}
         {reservation.status === "CONFIRMED" ? (
           <Link
             href="/negocio/entregas"

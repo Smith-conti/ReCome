@@ -58,12 +58,12 @@ const steps = [
   {
     title: "Reserva",
     description:
-      "Elige la cantidad que necesitas. El stock se descuenta al instante y recibes un código único.",
+      "Reserva hasta 5 unidades y completa el pago simulado en 10 minutos. El comercio tiene 15 minutos para confirmar.",
   },
   {
     title: "Recoge",
     description:
-      "Acude al establecimiento dentro del horario indicado, muestra tu código y paga en el local.",
+      "Tras la confirmación, muestra tu QR de un solo uso y recoge dentro del horario indicado. No se cobra dinero real.",
   },
 ];
 
@@ -79,7 +79,7 @@ const categories = [
 const businessPoints = [
   "Publica ofertas con cantidad, precio y horario de recojo en minutos.",
   "Controla el stock disponible y pausa tus ofertas cuando lo necesites.",
-  "Confirma entregas con un código único y consulta tu historial.",
+  "Valida entregas con QR y consulta la comisión simulada.",
   "Recupera parte del valor de los productos que ibas a desechar.",
 ];
 
@@ -105,7 +105,7 @@ export default function HomePage() {
             <p className="mt-6 max-w-xl text-base text-muted-foreground sm:text-lg">
               ReCome conecta a consumidores con panaderías, cafeterías,
               restaurantes y otros comercios locales que tienen excedentes de
-              alimentos. Reserva, recoge y paga en el establecimiento.
+              alimentos. Reserva, completa el pago simulado y recoge con tu QR.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -132,7 +132,7 @@ export default function HomePage() {
             <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
               <li className="inline-flex items-center gap-1.5">
                 <Check className="size-4 text-primary" aria-hidden="true" />
-                Sin pagos en línea
+                Pago simulado, sin cobros
               </li>
               <li className="inline-flex items-center gap-1.5">
                 <Check className="size-4 text-primary" aria-hidden="true" />

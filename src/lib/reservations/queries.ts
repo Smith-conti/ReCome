@@ -14,7 +14,10 @@ import {
 
 const RESERVATION_BASE_COLUMNS = `
   id, offer_id, business_id, customer_id, quantity, unit_price, total_price,
-  status, pickup_code, failed_attempts, expires_at, created_at, updated_at
+  status, pickup_code, pickup_token, workflow_version, paid_at,
+  commission_rate, commission_amount, business_net_amount, cancellation_reason,
+  pickup_start_snapshot, pickup_end_snapshot,
+  failed_attempts, expires_at, created_at, updated_at
 `;
 
 const RESERVATION_RELATIONS = `${RESERVATION_BASE_COLUMNS},
@@ -65,7 +68,16 @@ type RawReservation = {
   unit_price: number | string;
   total_price: number | string;
   status: string;
-  pickup_code: string;
+  pickup_code: string | null;
+  pickup_token: string | null;
+  workflow_version: number;
+  paid_at: string | null;
+  commission_rate: number | string;
+  commission_amount: number | string;
+  business_net_amount: number | string;
+  cancellation_reason: string | null;
+  pickup_start_snapshot: string;
+  pickup_end_snapshot: string;
   failed_attempts: number;
   expires_at: string;
   created_at: string;
@@ -144,11 +156,22 @@ function mapReservation(row: RawReservation): Reservation {
     totalPrice: toNumber(row.total_price),
     status: isReservationStatus(row.status) ? row.status : "PENDING",
     pickupCode: row.pickup_code,
+    pickupToken: row.pickup_token,
+    workflowVersion: row.workflow_version,
+    paidAt: row.paid_at,
+    commissionRate: toNumber(row.commission_rate),
+    commissionAmount: toNumber(row.commission_amount),
+    businessNetAmount: toNumber(row.business_net_amount),
+    cancellationReason: row.cancellation_reason,
     failedAttempts: row.failed_attempts,
     expiresAt: row.expires_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-    offer: mapOfferSummary(firstRelation(row.offers)),
+    offer: mapOfferSummary(firstRelation(row.offers) ? {
+      ...firstRelation(row.offers)!,
+      pickup_start: row.pickup_start_snapshot,
+      pickup_end: row.pickup_end_snapshot,
+    } : null),
     business: mapBusinessSummary(firstRelation(row.businesses)),
     customer: mapCustomerSummary(firstRelation(row.profiles)),
   };
@@ -169,11 +192,13 @@ function mapEvent(row: RawEvent): ReservationEvent | null {
 
 function emptyStatusCounts(): Record<ReservationStatus, number> {
   return {
+    PENDING_PAYMENT: 0,
     PENDING: 0,
     CONFIRMED: 0,
     DELIVERED: 0,
     CANCELLED: 0,
     EXPIRED: 0,
+    NO_SHOW: 0,
   };
 }
 
@@ -227,7 +252,7 @@ export async function listUpcomingReservationsForCustomer(
   const { data } = await supabase
     .from("reservations")
     .select(RESERVATION_RELATIONS)
-    .in("status", ["PENDING", "CONFIRMED"])
+    .in("status", ["PENDING_PAYMENT", "PENDING", "CONFIRMED"])
     .order("expires_at", { ascending: true })
     .limit(limit);
 

@@ -1,33 +1,39 @@
 export const RESERVATION_STATUSES = [
+  "PENDING_PAYMENT",
   "PENDING",
   "CONFIRMED",
   "DELIVERED",
   "CANCELLED",
   "EXPIRED",
+  "NO_SHOW",
 ] as const;
 
 export type ReservationStatus = (typeof RESERVATION_STATUSES)[number];
 
 export const RESERVATION_STATUS_LABEL: Record<ReservationStatus, string> = {
-  PENDING: "Pendiente",
+  PENDING_PAYMENT: "Pendiente de pago simulado",
+  PENDING: "Pendiente de confirmación",
   CONFIRMED: "Confirmada",
   DELIVERED: "Entregada",
   CANCELLED: "Cancelada",
   EXPIRED: "Vencida",
+  NO_SHOW: "No recogida",
 };
 
 export type BadgeTone = "default" | "secondary" | "destructive" | "outline";
 
 export const RESERVATION_STATUS_TONE: Record<ReservationStatus, BadgeTone> = {
+  PENDING_PAYMENT: "secondary",
   PENDING: "secondary",
   CONFIRMED: "default",
   DELIVERED: "outline",
   CANCELLED: "destructive",
   EXPIRED: "outline",
+  NO_SHOW: "destructive",
 };
 
 /** Estados que todavía ocupan stock de la oferta. */
-export const ACTIVE_RESERVATION_STATUSES = ["PENDING", "CONFIRMED"] as const;
+export const ACTIVE_RESERVATION_STATUSES = ["PENDING_PAYMENT", "PENDING", "CONFIRMED"] as const;
 
 export function isReservationStatus(
   value: string,
@@ -38,15 +44,17 @@ export function isReservationStatus(
 export function isActiveReservationStatus(
   value: ReservationStatus,
 ): boolean {
-  return value === "PENDING" || value === "CONFIRMED";
+  return value === "PENDING_PAYMENT" || value === "PENDING" || value === "CONFIRMED";
 }
 
 export const RESERVATION_EVENT_LABEL = {
   CREATED: "Reserva creada",
+  PAYMENT_SIMULATED: "Pago simulado completado",
   CONFIRMED: "Reserva confirmada",
   DELIVERED: "Entrega registrada",
   CANCELLED: "Reserva cancelada",
   EXPIRED: "Reserva vencida",
+  NO_SHOW: "Pedido no recogido",
 } as const;
 
 export type ReservationEventType = keyof typeof RESERVATION_EVENT_LABEL;
@@ -84,7 +92,14 @@ export type Reservation = {
   unitPrice: number;
   totalPrice: number;
   status: ReservationStatus;
-  pickupCode: string;
+  pickupCode: string | null;
+  pickupToken: string | null;
+  workflowVersion: number;
+  paidAt: string | null;
+  commissionRate: number;
+  commissionAmount: number;
+  businessNetAmount: number;
+  cancellationReason: string | null;
   failedAttempts: number;
   expiresAt: string;
   createdAt: string;

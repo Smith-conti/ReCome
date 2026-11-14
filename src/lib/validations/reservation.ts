@@ -7,8 +7,8 @@ const quantityField = z
   .refine((value) => /^\d{1,2}$/.test(value), "Usa un número entero.")
   .transform((value) => Number(value))
   .refine(
-    (value) => value >= 1 && value <= 10,
-    "Puedes reservar entre 1 y 10 unidades.",
+    (value) => value >= 1 && value <= 5,
+    "Puedes reservar entre 1 y 5 unidades.",
   );
 
 export const reservationSchema = z.object({
@@ -20,10 +20,9 @@ const pickupCodeField = z
   .string()
   .trim()
   .min(1, "Escribe el código de recojo.")
-  .transform((value) => value.toUpperCase())
   .refine(
-    (value) => /^[A-HJ-NP-Z2-79]{6}$/.test(value),
-    "El código tiene 6 caracteres (letras y números, sin O, I ni 0/1).",
+    (value) => /^RECOME:[0-9a-f-]{36}:[0-9a-f-]{36}$/i.test(value) || /^[A-HJ-NP-Z2-79]{6}$/i.test(value),
+    "Escanea o pega un QR de ReCome válido. El código de seis caracteres solo sirve para reservas anteriores.",
   );
 
 export const pickupCodeSchema = z.object({
