@@ -113,6 +113,10 @@ de aplicación está en [`docs/base-de-datos.md`](docs/base-de-datos.md).
 > proyecto. `supabase/consolidado.sql` reúne las 10 migraciones para recrear el
 > esquema desde cero.
 
+Los datos de demostración se cargan con `node supabase/seed/datos-prueba.mjs`
+y sus ofertas se renuevan con `node supabase/seed/ofertas-vigentes.mjs`
+(ver [`docs/base-de-datos.md`](docs/base-de-datos.md)).
+
 ## Autenticación y roles
 
 El detalle de registro, inicio de sesión, recuperación de contraseña,

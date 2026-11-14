@@ -251,12 +251,19 @@ Pendiente de verificar dentro de las fases siguientes:
 | Archivo | Uso |
 |---|---|
 | `datos-prueba.mjs` | Crea 7 comercios de Cusco con su cuenta `BUSINESS` y 19 ofertas activas |
+| `ofertas-vigentes.mjs` | Renueva precios, stock y fechas de recojo del catálogo de prueba |
+| `comercios.mjs` | Catálogo compartido de comercios y ofertas de demostración |
+| `cliente.mjs` | Lectura de `.env.local` y cliente REST con la clave secreta |
 | `limpiar-datos-prueba.sql` | Borra todo lo anterior (comercios, ofertas, reservas y cuentas `@recome.test`) |
 
 Requisitos: `NEXT_PUBLIC_SUPABASE_URL` y `SUPABASE_SECRET_KEY` en `.env.local`.
 
 ```bash
 node supabase/seed/datos-prueba.mjs
+
+# Renovar la vigencia de las ofertas para probar el catálogo:
+node supabase/seed/ofertas-vigentes.mjs
+node supabase/seed/ofertas-vigentes.mjs 2026-11-15 2026-11-16 2026-11-17
 ```
 
 El script es idempotente: las cuentas se buscan por correo y los comercios por

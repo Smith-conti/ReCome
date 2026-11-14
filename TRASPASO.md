@@ -97,6 +97,17 @@ Proyecto de Supabase ya provisionado: `qhjtagnlwefzmklgtfvp.supabase.co`
 node supabase/seed/datos-prueba.mjs
 ```
 
+Las ofertas del seed vencen al terminar el día de recojo. Para volver a
+generar ofertas activas sin recrear cuentas ni comercios:
+
+```bash
+node supabase/seed/ofertas-vigentes.mjs                      # próximos 3 días
+node supabase/seed/ofertas-vigentes.mjs 2026-11-15 2026-11-16 2026-11-17
+```
+
+El catálogo de comercios y ofertas vive en `supabase/seed/comercios.mjs`, y la
+lectura de credenciales y el cliente REST en `supabase/seed/cliente.mjs`.
+
 Para borrar todo lo anterior:
 
 ```sql
@@ -796,6 +807,7 @@ npm run lint                # ESLint
 npx tsc --noEmit            # solo tipos
 
 node supabase/seed/datos-prueba.mjs          # cargar datos de prueba
+node supabase/seed/ofertas-vigentes.mjs      # renovar fechas de las ofertas
 # limpiar: ejecutar supabase/seed/limpiar-datos-prueba.sql en el SQL Editor
 
 git status --short          # ver cambios pendientes
@@ -831,8 +843,9 @@ Si retomas el proyecto, en este orden:
    pausarlo, ajustar el stock y archivarlo.
 2. Probar `/admin/ofertas` con la cuenta `ADMIN` y confirmar que no aparecen
    acciones que el esquema no registra.
-3. Crear un par de ofertas con horarios vigentes: las del seed ya vencieron y el
-   catálogo público muestra una sola oferta activa.
+3. El catálogo ya tiene 20 ofertas activas repartidas entre el 15, 16 y 17 de
+   noviembre (`supabase/seed/ofertas-vigentes.mjs`). Si se vencen, volver a
+   ejecutar ese script.
 4. Revisar la consola del navegador y el log del servidor; después commitear la
    Fase 5.
 5. Pedir validación de la Fase 5 antes de empezar la Fase 6 (reservas y
